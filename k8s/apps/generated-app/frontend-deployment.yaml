@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: generated-app-frontend:latest
+          image: ghcr.io/id377585/agnetz-ia-frontend:v0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 80
