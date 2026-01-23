@@ -37,6 +37,7 @@ jobs:
           cache: npm
 
       - name: Frontend build
+        if: ${{ hashFiles('frontend/package.json') != '' }}
         run: |
           cd frontend
           npm install
@@ -45,6 +46,7 @@ jobs:
           npm run build
 
       - name: Backend build
+        if: ${{ hashFiles('backend/package.json') != '' }}
         env:
           DATABASE_URL: postgresql://dev:dev@localhost:5432/devdb?schema=public
         run: |
@@ -58,6 +60,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    if: ${{ hashFiles('docker-compose.yml') != '' }}
     services:
       postgres:
         image: postgres:15
