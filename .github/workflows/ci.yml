@@ -152,13 +152,19 @@ jobs:
           else
             echo "REGISTRY=ghcr.io" >> $GITHUB_ENV
           fi
+      - name: Detect app dirs
+        run: |
+          if [ -d backend ]; then echo "HAS_BACKEND=true" >> $GITHUB_ENV; else echo "HAS_BACKEND=false" >> $GITHUB_ENV; fi
+          if [ -d frontend ]; then echo "HAS_FRONTEND=true" >> $GITHUB_ENV; else echo "HAS_FRONTEND=false" >> $GITHUB_ENV; fi
       - name: Build & push images
+        if: ${{ env.HAS_BACKEND == 'true' && env.HAS_FRONTEND == 'true' }}
         run: |
           BACKEND=${{ env.REGISTRY }}/${{ env.REPO_LC }}-backend
           FRONTEND=${{ env.REGISTRY }}/${{ env.REPO_LC }}-frontend
           docker buildx build --push -t $BACKEND:${{ env.VERSION }} -t $BACKEND:latest backend
           docker buildx build --push -t $FRONTEND:${{ env.VERSION }} -t $FRONTEND:latest frontend
       - name: Update manifests (GitOps)
+        if: ${{ env.HAS_BACKEND == 'true' && env.HAS_FRONTEND == 'true' }}
         run: |
           export REGISTRY=${{ env.REGISTRY }}
           export AGNETZ_REPO=${{ env.REPO_LC }}
