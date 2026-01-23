@@ -161,8 +161,8 @@ jobs:
         run: |
           BACKEND=${{ env.REGISTRY }}/${{ env.REPO_LC }}-backend
           FRONTEND=${{ env.REGISTRY }}/${{ env.REPO_LC }}-frontend
-          docker buildx build --push -t $BACKEND:${{ env.VERSION }} -t $BACKEND:latest backend
-          docker buildx build --push -t $FRONTEND:${{ env.VERSION }} -t $FRONTEND:latest frontend
+          docker buildx build --platform linux/amd64,linux/arm64 --push -t $BACKEND:${{ env.VERSION }} -t $BACKEND:latest backend
+          docker buildx build --platform linux/amd64,linux/arm64 --push -t $FRONTEND:${{ env.VERSION }} -t $FRONTEND:latest frontend
       - name: Update manifests (GitOps)
         if: ${{ env.HAS_BACKEND == 'true' && env.HAS_FRONTEND == 'true' }}
         run: |
