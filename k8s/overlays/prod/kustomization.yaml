@@ -2,6 +2,7 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../apps/generated-app
+  - sealed-secret-prod.yaml
 namespace: agnetz-prod
 patches:
   - target:
@@ -20,3 +21,9 @@ patches:
       kind: Ingress
       name: generated-app
     path: patch-ingress.yaml
+
+patches:
+  - target:
+      kind: Secret
+      name: app-secrets
+    path: patch-remove-app-secret.yaml
