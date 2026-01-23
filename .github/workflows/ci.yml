@@ -97,7 +97,7 @@ jobs:
 
   release:
     if: github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]'
-    needs: [build, e2e]
+    needs: [build]
     runs-on: ubuntu-latest
     permissions:
       contents: write
