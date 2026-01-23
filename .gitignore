@@ -30,3 +30,7 @@ venv/
 # --- SOPS decrypted outputs (SE ALGUM DIA GERAR) ---
 *.dec.yaml
 *.decrypted.yaml
+
+# --- K8S SECRETS (PLAINTEXT NUNCA SOBE) ---
+k8s/**/secret-prod.yaml
+k8s/**/secret-*.yaml

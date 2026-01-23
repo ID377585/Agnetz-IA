@@ -1,4 +1,4 @@
 creation_rules:
-  - path_regex: k8s/overlays/.*/secret-.*\.yaml
+  - path_regex: k8s/overlays/.+\.enc\.yaml$
     encrypted_regex: '^(data|stringData)$'
-    age: age1d5quqwq6s5ydqzfvqn2vny75lw6r0mahynacdhfrqmc33fphma2sxyery7
+    age: age1mzpvq6ylq5ndneck3qgjn3s65rzy6ekey0kxjce9sfy047nsygwq9fs9da
