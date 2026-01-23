@@ -34,3 +34,4 @@ venv/
 # --- K8S SECRETS (PLAINTEXT NUNCA SOBE) ---
 k8s/**/secret-prod.yaml
 k8s/**/secret-*.yaml
+pub-cert.pem
