@@ -69,3 +69,16 @@ Depois acesse `http://app.local`.
 - O backend executa migrações e seed no startup (idempotente).
 - O banco usa `StatefulSet` com `local-path` (k3s).
 - Para ambientes reais, substitua secrets e imagens por registries privados.
+
+## Ambientes (staging/prod)
+
+- Staging: `k8s/overlays/staging`
+- Prod: `k8s/overlays/prod`
+
+Use o ArgoCD Applications:
+- `k8s/argocd/app-generated-app-staging.yaml`
+- `k8s/argocd/app-generated-app-prod.yaml`
+
+### Secrets
+
+Os arquivos `secret-*.example.yaml` são exemplos. Para produção, use SealedSecrets ou SOPS.
