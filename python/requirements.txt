@@ -1,0 +1,7 @@
+requests
+python-dotenv
+rich
+chromadb
+sentence-transformers
+pyyaml
+boto3
