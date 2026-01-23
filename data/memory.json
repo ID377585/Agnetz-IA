@@ -1,0 +1,42 @@
+[
+  {
+    "role": "user",
+    "content": "Qual é o meu nome?"
+  },
+  {
+    "role": "assistant",
+    "content": " Ivan."
+  },
+  {
+    "role": "user",
+    "content": "--extract-facts data/artigo.md"
+  },
+  {
+    "role": "assistant",
+    "content": " Olá, Ivan! Como posso ajudar? Eu sou o Agnetz.IA, um assistente técnico para desenvolvimento (Node.js, automações, APIs e IA local).\n\nResumo atual:\n- Nome do usuário: Ivan"
+  },
+  {
+    "role": "user",
+    "content": "--extract-facts data/artigo.md"
+  },
+  {
+    "role": "assistant",
+    "content": " Olá, Ivan!\n\nPara extrair dados de um arquivo Markdown, você pode utilizar uma ferramenta como o `pandoc` junto com o `grep`. Porém, para executar essas operações no seu computador, é necessário ter instalado essas ferramentas.\n\nPara extrair dados específicos do arquivo Markdown \"artigo.md\", você pode utilizar o seguinte comando na linha de comando:\n```bash\ngrep -oP '(?<=key: ).+' data/artigo.md | grep -v '^$' > data/facts.txt\n```\nEste comando procura pelas palavras \"key:\" no arquivo Markdown e extrai o texto que segue a ela, criando um novo arquivo chamado \"data/facts.txt\" com os dados extraídos."
+  },
+  {
+    "role": "user",
+    "content": "--extract-facts data/artigo.md"
+  },
+  {
+    "role": "assistant",
+    "content": " Olá, Ivan!\n\nPara extrair dados de um arquivo Markdown, você pode utilizar uma ferramenta como o `pandoc` junto com o `grep`. Porém, para executar essas operações no seu computador, é necessário ter instalado essas ferramentas.\n\nPara extrair dados específicos do arquivo Markdown \"artigo.md\", você pode utilizar o seguinte comando na linha de comando:\n```bash\ngrep -oP '(?<=key: ).+' data/artigo.md | grep -v '^$' > data/facts.txt\n```\nEste comando procura pelas palavras \"key:\" no arquivo Markdown e extrai o texto que segue a ela, criando um novo arquivo chamado \"data/facts.txt\" com os dados extraídos."
+  },
+  {
+    "role": "user",
+    "content": "teste rápido"
+  },
+  {
+    "role": "assistant",
+    "content": " Olá, Ivan!\n\nPara executar uma tarefa no meu sistema, você pode utilizar o comando `curl` para enviar uma solicitação HTTP para a API do Agnetz.IA. Aqui está um exemplo de como fazer isso:\n```bash\ncurl -X POST http://localhost:11434/tarefa -H \"Content-Type: application/json\" -d '{\"tarefa\": \"teste rápido\", \"linguagem\": \"pt-BR\"}'\n```\nNeste exemplo, estou enviando uma solicitação HTTP POST para a API do Agnetz.IA com o endereço `http://localhost:11434/tarefa`. Eu também estou informando o tipo de conteúdo da mensagem (`Content-Type: application/json`) e enviando um objeto JSON com a tarefa que desejo realizar (\"teste rápido\") e a linguagem para utilizar (\"pt-BR\").\n\nPara obter mais informações sobre o Agnetz.IA, você pode consultar as regras obrigatórias e o resumo do usuário/projeto que estão disponíveis na sua pergunta anterior."
+  }
+]

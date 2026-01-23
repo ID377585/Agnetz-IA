@@ -1,0 +1,68 @@
+{
+  "title": "Adicionar suporte a CSV no Agnetz",
+  "goal": "Criar dois comandos: --csv-read e --csv-summary",
+  "assumptions": [
+    "usuario|projeto: nome = Agnetz.IA",
+    "tecnologia: stack = Node.js + Ollama",
+    "objetivo: tarefa = executar tarefas reais",
+    "objetivo: funcoes = ler e resumir arquivos, validar JSON, criar arquivos, ajudar com automações",
+    "plano: passo1 = adicionar suporte a CSV com parsing",
+    "plano: passo2 = adicionar suporte a PDF via parser",
+    "plano: passo3 = criar modo 'plan + execute'"
+  ],
+  "steps": [
+    {
+      "id": 1,
+      "title": "Criar função para ler CSV",
+      "details": "Função que recebe o caminho do arquivo CSV e retorna um objeto JSON com as linhas do arquivo.",
+      "files": [
+        "src/csvReader.js"
+      ],
+      "commands": [
+        "touch src/csvReader.js",
+        "echo 'const fs = require(\"fs\"); const csvParser = require(\"csv-parser\");\nfunction readCSV(filePath) {\n  return new Promise((resolve, reject) => {\n    const results = [];\n    const stream = fs.createReadStream(filePath)\n      .pipe(csvParser());\n    stream.on(\"data\", (row) => {\n      results.push(row);\n    });\n    stream.on(\"end\", () => resolve(results));\n    stream.on(\"error\", reject);\n  });\n}' > src/csvReader.js"
+      ],
+      "risk": "Uso de biblioteca externa csv-parser, que não é necessária para o objetivo final."
+    },
+    {
+      "id": 2,
+      "title": "Criar função para resumir CSV",
+      "details": "Função que recebe um objeto JSON com as linhas do arquivo CSV e retorna um objeto com o número de linhas, colunas, nomes das colunas e soma/média de colunas numéricas se existirem.",
+      "files": [
+        "src/csvSummary.js"
+      ],
+      "commands": [
+        "touch src/csvSummary.js",
+        "echo 'function summaryCSV(data) {\n  const headers = data[0];\n  const rows = data.slice(1);\n  const numColumns = headers.length;\n  const numericColumns = [];\n  let totalNumericSum = 0;\n  let totalNumericCount = 0;\n\n  for (let i = 0; i < numColumns; i++) {\n    if (!isNaN(parseFloat(headers[i])) && !isNaN(parseFloat(rows[0][i]))) {\n      numericColumns.push(headers[i]);\n      totalNumericSum += parseFloat(rows[0][i]);\n      for (let j = 1; j < rows.length; j++) {\n        totalNumericSum += parseFloat(rows[j][i]);\n      }\n      totalNumericCount += rows.length;\n    }\n  }\n\n  const average = totalNumericSum / totalNumericCount;\n\n  return {\n    lines: data.length,\n    columns: numColumns,\n    headers, \n    numericColumns, \n    totalNumericSum, \n    totalNumericCount, \n    average\n  };\n}' > src/csvSummary.js"
+      ],
+      "risk": "Função não é necessária para o objetivo final."
+    },
+    {
+      "id": 3,
+      "title": "Criar comando --csv-read",
+      "details": "Comando que lê um arquivo CSV e imprime o JSON resultante.",
+      "files": [
+        "bin/csvRead.js"
+      ],
+      "commands": [
+        "touch bin/csvRead.js",
+        "echo 'const fs = require(\"fs\"); const csvReader = require(\"./src/csvReader\");\nfunction readCSV(filePath) {\n  return csvReader.readCSV(filePath).then((data) => {\n    console.log(JSON.stringify(data, null, 2));\n  });\n}' > bin/csvRead.js"
+      ],
+      "risk": "Uso de biblioteca externa csv-reader."
+    },
+    {
+      "id": 4,
+      "title": "Criar comando --csv-summary",
+      "details": "Comando que lê um arquivo CSV e imprime o resumo do mesmo.",
+      "files": [
+        "bin/csvSummary.js"
+      ],
+      "commands": [
+        "touch bin/csvSummary.js",
+        "echo 'const fs = require(\"fs\"); const csvReader = require(\"./src/csvReader\"); const csvSummary = require(\"./src/csvSummary\");\nfunction summaryCSV(filePath) {\n  return csvReader.readCSV(filePath).then((data) => {\n    console.log(JSON.stringify(csvSummary.summaryCSV(data), null, 2));\n  });\n}' > bin/csvSummary.js"
+      ],
+      "risk": "Uso de biblioteca externa csv-reader."
+    }
+  ],
+  "needs_user_confirmation": []
+}

@@ -1,0 +1,68 @@
+{
+  "meta": {
+    "tool": "agnetz",
+    "command": "csv-analyze",
+    "format": "json"
+  },
+  "file": "data/clientes.csv",
+  "summary": {
+    "file": "data/clientes.csv",
+    "lines": 5,
+    "dataRows": 4,
+    "columns": 4,
+    "headers": [
+      "nome",
+      "email",
+      "cidade",
+      "valor"
+    ],
+    "numericColumns": [
+      "valor"
+    ],
+    "numericSummary": {
+      "valor": {
+        "count": 4,
+        "sum": 530,
+        "avg": 132.5
+      }
+    },
+    "sample": [
+      {
+        "nome": "Ivan",
+        "email": "ivan@email.com",
+        "cidade": "Sao Paulo",
+        "valor": "120"
+      },
+      {
+        "nome": "Maria",
+        "email": "maria@email.com",
+        "cidade": "Rio de Janeiro",
+        "valor": "90"
+      },
+      {
+        "nome": "Joao",
+        "email": "joao@email.com",
+        "cidade": "Sao Paulo",
+        "valor": "200"
+      }
+    ]
+  },
+  "analysis": {
+    "resumo": "Arquivo CSV com 4 colunas e 4 linhas de dados, contendo informações sobre clientes como nome, email, cidade e valor. A média do valor é de 132,5.",
+    "insights": [
+      "A maioria dos clientes está localizada em São Paulo",
+      "O valor total dos clientes é de R$ 530"
+    ],
+    "problemas": [
+      "Não foi possível identificar se há qualquer duplicidade de email ou nome entre os clientes."
+    ],
+    "proximosPassos": [
+      "Verificar a presença de duplicidades nos dados",
+      "Analisar se o valor está em formato numérico corretamente"
+    ],
+    "perguntas": [
+      "Existe qualquer duplicidade entre os emails ou nomes dos clientes?",
+      "É possível identificar a cidade de origem de cada cliente?"
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+import { OllamaProvider } from "../src/providers/OllamaProvider.js";
+import { AgnetzIA } from "../src/AgnetzIA.js";
+
+const provider = new OllamaProvider({ model: "mistral" });
+
+const agnetz = new AgnetzIA({
+  provider,
+  systemPrompt: `
+Você é o Agnetz.IA, um assistente técnico para desenvolvimento (Node.js, automações, APIs e IA local).
+Regras:
+- Responda sempre em pt-BR.
+- Seja prático e direto.
+- Sempre use URLs reais do Ollama local (http://localhost:11434).
+- Nunca use exemplos fictícios como api.exemplo.com.
+`.trim(),
+});
+
+async function main() {
+  const r1 = await agnetz.ask(
+    "Mostre o comando curl EXATO para testar http://localhost:11434/api/chat com o modelo mistral."
+  );
+
+  console.log("\nResposta 1:\n", r1);
+
+  const r2 = await agnetz.ask(
+    "Explique como saber que a resposta do Ollama funcionou corretamente e o que devo ver no JSON."
+  );
+
+  console.log("\nResposta 2:\n", r2);
+}
+
+main().catch((err) => {

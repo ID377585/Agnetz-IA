@@ -1,0 +1,20 @@
+{
+  "name": "agnetz-ia",
+  "version": "1.0.0",
+  "description": "Agnetz.IA (CLI local com Ollama)",
+  "type": "module",
+  "bin": {
+    "agnetz": "./agnetz.js"
+  },
+  "scripts": {
+    "start": "node ./agnetz.js",
+    "chat": "node ./agnetz.js",
+    "test:ollama": "node ./tests/test-ollama.js"
+  },
+  "dependencies": {
+    "execa": "^9.6.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

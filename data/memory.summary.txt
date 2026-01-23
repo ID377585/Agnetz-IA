@@ -1,0 +1,7 @@
+- usuario|projeto: nome = Agnetz.IA
+- tecnologia: stack = Node.js + Ollama
+- objetivo: tarefa = executar tarefas reais
+- objetivo: funcoes = ler e resumir arquivos, validar JSON, criar arquivos, ajudar com automações
+- plano: passo1 = adicionar suporte a CSV com parsing
+- plano: passo2 = adicionar suporte a PDF via parser
+- plano: passo3 = criar modo 'plan + execute'
