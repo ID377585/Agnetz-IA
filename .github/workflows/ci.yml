@@ -143,6 +143,8 @@ jobs:
         run: |
           VERSION=$(bash scripts/semver.sh)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
+          REPO_LC=$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')
+          echo "REPO_LC=$REPO_LC" >> $GITHUB_ENV
           if [ "${REGISTRY_PROVIDER}" = "ecr" ]; then
             echo "REGISTRY=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com" >> $GITHUB_ENV
           elif [ "${REGISTRY_PROVIDER}" = "gar" ]; then
@@ -152,13 +154,14 @@ jobs:
           fi
       - name: Build & push images
         run: |
-          BACKEND=${{ env.REGISTRY }}/${{ github.repository }}-backend
-          FRONTEND=${{ env.REGISTRY }}/${{ github.repository }}-frontend
+          BACKEND=${{ env.REGISTRY }}/${{ env.REPO_LC }}-backend
+          FRONTEND=${{ env.REGISTRY }}/${{ env.REPO_LC }}-frontend
           docker buildx build --push -t $BACKEND:${{ env.VERSION }} -t $BACKEND:latest backend
           docker buildx build --push -t $FRONTEND:${{ env.VERSION }} -t $FRONTEND:latest frontend
       - name: Update manifests (GitOps)
         run: |
           export REGISTRY=${{ env.REGISTRY }}
+          export AGNETZ_REPO=${{ env.REPO_LC }}
           python scripts/update_k8s_images.py --tag ${{ env.VERSION }} --k8s-path k8s/apps/generated-app --extra "k8s/overlays/staging;k8s/overlays/prod"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
