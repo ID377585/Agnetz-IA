@@ -68,7 +68,7 @@ Depois acesse `http://app.local`.
 
 - O backend executa migrações e seed no startup (idempotente).
 - O banco usa `StatefulSet` com `local-path` (k3s).
-- Para ambientes reais, substitua secrets e imagens por registries privados.
+- Para ambientes reais, use imagens em registry privado e secrets gerenciados.
 
 ## Ambientes (staging/prod)
 
@@ -78,7 +78,22 @@ Depois acesse `http://app.local`.
 Use o ArgoCD Applications:
 - `k8s/argocd/app-generated-app-staging.yaml`
 - `k8s/argocd/app-generated-app-prod.yaml`
+- `k8s/argocd/app-argo-rollouts.yaml`
 
 ### Secrets
 
-Os arquivos `secret-*.example.yaml` são exemplos. Para produção, use SealedSecrets ou SOPS.
+A base usa `ExternalSecret` em `k8s/apps/generated-app/externalsecret.yaml`.
+Para opções de secret store e alternativas, veja `k8s/secrets/README.md`.
+Para dev local, existe `k8s/apps/generated-app/secret.dev.example.yaml` como referência.
+
+## Argo Rollouts
+
+- Staging: canary com gates de análise (Prometheus/Datadog) e services `*-canary`.
+- Prod: blue/green com `previewService` e análise antes da promoção.
+
+Para habilitar:
+- Instale o Argo Rollouts controller no cluster.
+- Garanta que o CRD `Rollout` e `AnalysisTemplate` existam.
+  
+Observação:
+- Os templates de análise usam métricas reais (Prometheus por padrão). Ajuste `address` e `query` conforme o seu stack.

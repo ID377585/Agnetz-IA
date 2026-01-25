@@ -1,36 +1,34 @@
 # Checklist 100% Autonomia - Agnetz
 
 ## 1) CI/CD completo
-- [x] Workflow de build/test/e2e passa
-- [x] Release gera tag semântica
-- [x] Imagens publicadas no registry (GHCR/ECR/GAR)
-- [x] Manifests GitOps atualizados com tag
-- [x] ArgoCD sincroniza automaticamente
+- [x] Build multi-arch com Buildx
+- [x] SBOM + scan (Trivy) como gate
+- [x] Release semântico com tags vX.Y.Z e vX.Y.Z-rc.N
+- [x] Imagens publicadas no registry (GHCR)
+- [x] GitOps atualizado com digest (imutável) + tag (UX)
+- [x] ArgoCD/Flux sincroniza automaticamente
 
 ## 2) Secrets reais
-- [x] Secrets configurados via SealedSecrets ou SOPS
-- [x] .sops.yaml com chave AGE/GPG
-- [x] Secrets removidos do git (somente sealed/enc)
+- [x] External Secrets Operator (ou alternativa) como fonte única
+- [x] .env apenas local (nunca no cluster)
+- [x] CI sem secret em prompt (apenas nomes/refs)
 
 ## 3) Ambientes
-- [x] Staging com overlays aplicado
-- [x] Prod com overlays aplicado
-- [x] Hostnames configurados
-- [x] Promoção controlada (staging -> prod)
+- [x] Staging e prod separados (overlays/branches)
+- [x] Promoção controlada (staging → prod) com tag idêntica
+- [x] Rollback por tag anterior (1 clique)
+- [x] Smoke test em staging antes da promoção
 
 ## 4) Governança
-- [x] Environment "production" requer aprovação
-- [x] Rollback manual funciona (workflow_dispatch)
-- [x] Audit log atualizado em k8s/audit/approvals.log
+- [x] Environment "production" com aprovação no GitHub
+- [x] Change-freeze por janela (opcional via secrets)
+- [x] Audit trail via PRs no GitOps
+- [x] GitHub App token para GitOps (sem PAT)
 
-## 5) RAG / Memória
-- [x] Pastas indexadas (docs, apps, templates)
-- [x] Estado salvo em .agnetz/state.yaml
-
-## 6) Auto-fix
-- [x] Loop plan→gen→test→fix roda sem travar
-- [x] Limites de patch respeitados
-- [x] Logs JSONL gerados
+## 5) Progressive delivery
+- [x] Argo Rollouts (canary em staging)
+- [x] Argo Rollouts (blue/green em prod)
+- [x] Gates de análise automática
 
 ## Status final
 - 100% OK

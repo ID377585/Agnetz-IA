@@ -1,0 +1,79 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: backend-smoke
+spec:
+  args:
+    - name: prometheusAddress
+      value: http://prometheus-operated.monitoring.svc:9090
+    - name: backend5xxQuery
+      value: sum(rate(http_requests_total{app="backend",status=~"5.."}[2m]))
+  metrics:
+    - name: backend-5xx-rate
+      interval: 30s
+      successCondition: result < 1
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: "{{args.prometheusAddress}}"
+          query: "{{args.backend5xxQuery}}"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: frontend-smoke
+spec:
+  args:
+    - name: prometheusAddress
+      value: http://prometheus-operated.monitoring.svc:9090
+    - name: frontend5xxQuery
+      value: sum(rate(http_requests_total{app="frontend",status=~"5.."}[2m]))
+  metrics:
+    - name: frontend-5xx-rate
+      interval: 30s
+      successCondition: result < 1
+      failureLimit: 1
+      provider:
+        prometheus:
+          address: "{{args.prometheusAddress}}"
+          query: "{{args.frontend5xxQuery}}"
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: backend-smoke-dd
+spec:
+  metrics:
+    - name: backend-5xx-rate
+      interval: 30s
+      successCondition: result < 1
+      failureLimit: 1
+      provider:
+        datadog:
+          apiKey:
+            name: datadog-keys
+            key: api-key
+          appKey:
+            name: datadog-keys
+            key: app-key
+          query: sum:trace.web.request.errors{service:backend}.as_count()
+---
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: frontend-smoke-dd
+spec:
+  metrics:
+    - name: frontend-5xx-rate
+      interval: 30s
+      successCondition: result < 1
+      failureLimit: 1
+      provider:
+        datadog:
+          apiKey:
+            name: datadog-keys
+            key: api-key
+          appKey:
+            name: datadog-keys
+            key: app-key
+          query: sum:trace.web.request.errors{service:frontend}.as_count()

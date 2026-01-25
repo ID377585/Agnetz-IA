@@ -1,68 +1,172 @@
-name: Promote to Prod
+name: Promote (staging → prod)
 
 on:
   workflow_dispatch:
     inputs:
-      digest:
-        description: 'Image digest (sha256:...) to promote'
+      image_tag:
+        description: 'Image tag to promote to production (must exist in registry)'
         required: true
-      image:
-        description: 'Full image name without digest (eg ghcr.io/id377585/agnetz-ia-backend)'
-        required: true
-      manifest_subpath:
-        description: 'Relative path inside GITOPS_PATH for the manifest (eg backend/deployment.yaml)'
-        required: true
-        default: 'backend/deployment.yaml'
+        default: ''
+      staging_base_url:
+        description: 'Base URL for staging smoke test (optional, can use secret STAGING_SMOKE_BASE_URL)'
+        required: false
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: id377585
+  BACKEND_IMAGE: ghcr.io/id377585/agnetz-ia-backend
+  FRONTEND_IMAGE: ghcr.io/id377585/agnetz-ia-frontend
 
 permissions:
-  contents: write
+  contents: read
+  pull-requests: write
+  id-token: write
 
 jobs:
+  smoke-test-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - name: Resolve staging URL
+        id: url
+        run: |
+          set -eux
+          BASE="${{ github.event.inputs.staging_base_url }}"
+          if [[ -z "$BASE" ]]; then
+            BASE="${{ secrets.STAGING_SMOKE_BASE_URL }}"
+          fi
+          BASE="${BASE%/}"
+          if [[ -z "$BASE" ]]; then
+            echo "Missing staging base URL. Provide input or STAGING_SMOKE_BASE_URL."
+            exit 1
+          fi
+          echo "base=$BASE" >> $GITHUB_OUTPUT
+
+      - name: Smoke test frontend
+        run: curl -fsS "${{ steps.url.outputs.base }}/"
+
+      - name: Smoke test backend
+        run: curl -fsS "${{ steps.url.outputs.base }}/api/health"
+
   promote:
     runs-on: ubuntu-latest
+    environment: production
+    needs: smoke-test-staging
+
     steps:
+      - name: Parse GitOps repo
+        id: gitops_repo
+        run: |
+          set -eux
+          OWNER="${GITOPS_REPO%%/*}"
+          REPO="${GITOPS_REPO##*/}"
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+        env:
+          GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
+
+      - name: Create GitOps App token
+        id: gitops_token
+        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITOPS_APP_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.gitops_repo.outputs.owner }}
+          repositories: ${{ steps.gitops_repo.outputs.repo }}
+
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image digests
+        id: digests
+        run: |
+          set -eux
+          TAG="${{ github.event.inputs.image_tag }}"
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          BACKEND_DIGEST=$(docker buildx imagetools inspect --raw "${{ env.BACKEND_IMAGE }}:${TAG}" | jq -r '.manifests[0].digest')
+          FRONTEND_DIGEST=$(docker buildx imagetools inspect --raw "${{ env.FRONTEND_IMAGE }}:${TAG}" | jq -r '.manifests[0].digest')
+          echo "backend_digest=$BACKEND_DIGEST" >> $GITHUB_OUTPUT
+          echo "frontend_digest=$FRONTEND_DIGEST" >> $GITHUB_OUTPUT
+
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.GITOPS_REPO }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          ref: ${{ secrets.GITOPS_BRANCH_PROD }}
           path: gitops
-          fetch-depth: 0
 
-      - name: Promote manifest
+      - name: Update manifests (prod)
+        id: update_manifests
         run: |
           set -eux
-          DIGEST="${{ github.event.inputs.digest }}"
-          IMAGE="${{ github.event.inputs.image }}"
-          MANIFEST_FILE="gitops/${{ secrets.GITOPS_PATH }}/${{ github.event.inputs.manifest_subpath }}"
-
-          if [ ! -f "$MANIFEST_FILE" ]; then
-            echo "Manifest not found: $MANIFEST_FILE"
-            exit 1
-          fi
+          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+          IMAGE_TAG="${{ github.event.inputs.image_tag }}"
 
           git -C gitops config user.email "actions@github.com"
           git -C gitops config user.name "github-actions"
 
-          BRANCH="promote/$(echo $IMAGE | tr '/:' '-' )-${DIGEST//:/-}"
-          git -C gitops checkout -b "$BRANCH"
+          BACK_MANIFESTS=(
+            "${BASE_PATH}/backend/rollout.yaml"
+            "${BASE_PATH}/backend/deployment.yaml"
+          )
+          FRONT_MANIFESTS=(
+            "${BASE_PATH}/frontend/rollout.yaml"
+            "${BASE_PATH}/frontend/deployment.yaml"
+          )
 
-          # Replace the image line with pinned digest
-          sed -E -i "s|image: .*|image: ${IMAGE}@${DIGEST}|g" "$MANIFEST_FILE"
+          for MANIFEST in "${BACK_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.backend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
 
-          git -C gitops add "$MANIFEST_FILE"
-          git -C gitops commit -m "chore: promote ${IMAGE}@${DIGEST} to prod" || echo "no changes to commit"
-          git -C gitops push --set-upstream origin "$BRANCH"
+          for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.frontend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
 
-      - name: Create PR to promote
+          BRANCH="promote/${IMAGE_TAG}-${{ github.run_id }}"
+          if git -C gitops diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "pr_created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "gitops_branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "pr_created=true" >> $GITHUB_OUTPUT
+
+      - name: Create PR in GitOps repo
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ secrets.GITOPS_REPO }}
-          base: ${{ secrets.GITOPS_BRANCH }}
-          head: ${{ steps.promote.outputs.branch || github.run_id }}
-          title: "chore: promote ${ { github.event.inputs.image } }@${{ github.event.inputs.digest }} to prod"
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          path: gitops
+          base: ${{ secrets.GITOPS_BRANCH_PROD }}
+          branch: ${{ steps.update_manifests.outputs.gitops_branch }}
+          title: "chore: promote ${{ github.event.inputs.image_tag }} to prod"
           body: |
-            Promotion triggered by manual workflow.
-            Image: ${{ github.event.inputs.image }}@${{ github.event.inputs.digest }}
-          labels: automated, promote
+            Promotion to production.
+            Backend: ${{ env.BACKEND_IMAGE }}@${{ steps.digests.outputs.backend_digest }}
+            Frontend: ${{ env.FRONTEND_IMAGE }}@${{ steps.digests.outputs.frontend_digest }}
+          draft: false
+          labels: promote,automated
+
+      - name: Enable auto-merge for the PR (if created)
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+          merge-method: squash

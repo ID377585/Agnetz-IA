@@ -2,7 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../apps/generated-app
-  - sealed-secret-prod.yaml
+  - rollout-backend.yaml
+  - rollout-frontend.yaml
+  - backend-preview-service.yaml
+  - frontend-preview-service.yaml
+  - analysis-templates.yaml
 namespace: agnetz-prod
 patches:
   - target:
@@ -10,20 +14,22 @@ patches:
       name: agnetz
     path: patch-namespace.yaml
   - target:
-      kind: Deployment
+      kind: Rollout
       name: backend
     path: patch-backend.yaml
   - target:
-      kind: Deployment
+      kind: Rollout
       name: frontend
     path: patch-frontend.yaml
   - target:
       kind: Ingress
       name: generated-app
     path: patch-ingress.yaml
-
-patches:
   - target:
-      kind: Secret
-      name: app-secrets
-    path: patch-remove-app-secret.yaml
+      kind: Deployment
+      name: backend
+    path: patch-delete-backend-deployment.yaml
+  - target:
+      kind: Deployment
+      name: frontend
+    path: patch-delete-frontend-deployment.yaml

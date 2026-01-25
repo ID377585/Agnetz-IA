@@ -1,34 +1,177 @@
-name: Rollback GitOps PR
+name: Rollback (GitOps)
 
 on:
   workflow_dispatch:
     inputs:
-      pr_number:
+      deploy_env:
+        description: 'Target environment (staging/prod)'
         required: true
-        type: number
+        default: 'prod'
+      image_tag:
+        description: 'Rollback image tag (leave empty to use previous release tag)'
+        required: false
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: id377585
+  BACKEND_IMAGE: ghcr.io/id377585/agnetz-ia-backend
+  FRONTEND_IMAGE: ghcr.io/id377585/agnetz-ia-frontend
 
 permissions:
-  contents: write
+  contents: read
+  pull-requests: write
+  id-token: write
 
 jobs:
   rollback:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.deploy_env }}
+
     steps:
-      - name: Install dependencies (gh, jq)
+      - name: Parse GitOps repo
+        id: gitops_repo
         run: |
+          set -eux
+          OWNER="${GITOPS_REPO%%/*}"
+          REPO="${GITOPS_REPO##*/}"
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+        env:
+          GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
+
+      - name: Create GitOps App token
+        id: gitops_token
+        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITOPS_APP_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.gitops_repo.outputs.owner }}
+          repositories: ${{ steps.gitops_repo.outputs.repo }}
+
+      - name: Resolve rollback tag
+        id: tag
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const inputTag = (process.env.INPUT_TAG || '').trim();
+            if (inputTag) {
+              core.setOutput('image_tag', inputTag);
+              return;
+            }
+            const { owner, repo } = context.repo;
+            const releases = await github.paginate(github.rest.repos.listReleases, {
+              owner,
+              repo,
+              per_page: 100,
+            });
+            const tags = releases.map(r => r.tag_name).filter(t => t && t.startsWith('v'));
+            if (tags.length < 2) {
+              throw new Error('Not enough releases to rollback. Provide image_tag explicitly.');
+            }
+            core.setOutput('image_tag', tags[1]);
+        env:
+          INPUT_TAG: ${{ github.event.inputs.image_tag }}
+
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Resolve image digests
+        id: digests
+        run: |
+          set -eux
+          TAG="${{ steps.tag.outputs.image_tag }}"
           sudo apt-get update -y
-          sudo apt-get install -y gh jq git
+          sudo apt-get install -y jq
+          BACKEND_DIGEST=$(docker buildx imagetools inspect --raw "${{ env.BACKEND_IMAGE }}:${TAG}" | jq -r '.manifests[0].digest')
+          FRONTEND_DIGEST=$(docker buildx imagetools inspect --raw "${{ env.FRONTEND_IMAGE }}:${TAG}" | jq -r '.manifests[0].digest')
+          echo "backend_digest=$BACKEND_DIGEST" >> $GITHUB_OUTPUT
+          echo "frontend_digest=$FRONTEND_DIGEST" >> $GITHUB_OUTPUT
 
-      - name: Authenticate gh
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          ref: ${{ github.event.inputs.deploy_env == 'prod' && secrets.GITOPS_BRANCH_PROD || secrets.GITOPS_BRANCH_STAGING }}
+          path: gitops
 
-      - name: Clone GitOps repo
+      - name: Update manifests (rollback)
+        id: update_manifests
         run: |
-          gh repo clone ${{ secrets.GITOPS_REPO }} gitops
+          set -eux
+          if [[ "${{ github.event.inputs.deploy_env }}" == "prod" ]]; then
+            BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+            BASE_BRANCH="${{ secrets.GITOPS_BRANCH_PROD }}"
+          else
+            BASE_PATH="gitops/${{ secrets.GITOPS_PATH_STAGING }}"
+            BASE_BRANCH="${{ secrets.GITOPS_BRANCH_STAGING }}"
+          fi
 
-      - name: Revert PR
-        run: |
-          cd gitops
-          gh pr revert ${{ github.event.inputs.pr_number }} --repo ${{ secrets.GITOPS_REPO }} --body "Reverting PR #${{ github.event.inputs.pr_number }} via rollback workflow"
-          # gh pr revert opens a revert PR. Optionally auto-merge if allowed by policies.
+          IMAGE_TAG="${{ steps.tag.outputs.image_tag }}"
+
+          git -C gitops config user.email "actions@github.com"
+          git -C gitops config user.name "github-actions"
+
+          BACK_MANIFESTS=(
+            "${BASE_PATH}/backend/rollout.yaml"
+            "${BASE_PATH}/backend/deployment.yaml"
+          )
+          FRONT_MANIFESTS=(
+            "${BASE_PATH}/frontend/rollout.yaml"
+            "${BASE_PATH}/frontend/deployment.yaml"
+          )
+
+          for MANIFEST in "${BACK_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.backend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
+
+          for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.frontend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
+
+          BRANCH="rollback/${IMAGE_TAG}-${{ github.run_id }}"
+          if git -C gitops diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "pr_created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "gitops_branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "gitops_base=$BASE_BRANCH" >> $GITHUB_OUTPUT
+          echo "pr_created=true" >> $GITHUB_OUTPUT
+
+      - name: Create PR in GitOps repo
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        id: create_pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          path: gitops
+          base: ${{ steps.update_manifests.outputs.gitops_base }}
+          branch: ${{ steps.update_manifests.outputs.gitops_branch }}
+          title: "revert: rollback to ${{ steps.tag.outputs.image_tag }}"
+          body: |
+            Rollback to image tag ${{ steps.tag.outputs.image_tag }}.
+            Backend: ${{ env.BACKEND_IMAGE }}@${{ steps.digests.outputs.backend_digest }}
+            Frontend: ${{ env.FRONTEND_IMAGE }}@${{ steps.digests.outputs.frontend_digest }}
+          draft: false
+          labels: rollback,automated
+
+      - name: Enable auto-merge for the PR (if created)
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+          merge-method: squash

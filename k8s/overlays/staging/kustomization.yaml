@@ -2,6 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
   - ../../apps/generated-app
+  - rollout-backend.yaml
+  - rollout-frontend.yaml
+  - backend-canary-service.yaml
+  - frontend-canary-service.yaml
+  - analysis-templates.yaml
 namespace: agnetz-staging
 patches:
   - target:
@@ -9,14 +14,22 @@ patches:
       name: agnetz
     path: patch-namespace.yaml
   - target:
-      kind: Deployment
+      kind: Rollout
       name: backend
     path: patch-backend.yaml
   - target:
-      kind: Deployment
+      kind: Rollout
       name: frontend
     path: patch-frontend.yaml
   - target:
       kind: Ingress
       name: generated-app
     path: patch-ingress.yaml
+  - target:
+      kind: Deployment
+      name: backend
+    path: patch-delete-backend-deployment.yaml
+  - target:
+      kind: Deployment
+      name: frontend
+    path: patch-delete-frontend-deployment.yaml

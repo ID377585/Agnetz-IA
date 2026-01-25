@@ -1,0 +1,54 @@
+# Runbook - Deploy 100% autônomo
+
+## 1) GitOps repo
+
+- Repositório criado: `https://github.com/ID377585/agnetz-gitops.git`.
+- Conteúdo publicado a partir de `/Users/ivanescobar/Projetos/gitops`.
+
+## 2) ArgoCD (auto-sync + auto-prune)
+
+Aplique as Applications:
+
+```
+kubectl apply -f k8s/argocd/app-argo-rollouts.yaml
+kubectl apply -f k8s/argocd/app-generated-app-staging.yaml
+kubectl apply -f k8s/argocd/app-generated-app-prod.yaml
+```
+
+Essas Apps já estão com:
+- `automated: { prune: true, selfHeal: true }`
+- `CreateNamespace=true`
+
+## 3) GitHub Environments
+
+Crie os ambientes:
+- `staging`
+- `production`
+
+No `production`, habilite aprovação obrigatória:
+- Settings → Environments → production → Required reviewers
+
+## 4) Auto-merge no GitOps repo
+
+Habilite no GitHub:
+- Settings → General → Pull Requests → Allow auto-merge
+- (Opcional) Proteções de branch exigindo checks verdes
+
+## 4.1) Secrets obrigatórios no repo de app (agnetz-ia)
+
+- `GITOPS_REPO`: `ID377585/agnetz-gitops`
+- `GITOPS_TOKEN`: token com acesso ao repo GitOps (ou configure GitHub App)
+- `GITOPS_BRANCH_STAGING`: `staging`
+- `GITOPS_BRANCH_PROD`: `main`
+- `GITOPS_PATH_STAGING`: `k8s/overlays/staging`
+- `GITOPS_PATH_PROD`: `k8s/overlays/prod`
+
+## 5) Secrets / OIDC (sem long-lived)
+
+- Configure OIDC no GitHub e no provedor (AWS/Vault/GCP).
+- Use OIDC para obter credenciais temporárias no CI.
+
+## 6) Smoke test (opcional)
+
+Se quiser validar staging antes de promover:
+- Configure o secret `STAGING_SMOKE_BASE_URL`.

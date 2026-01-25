@@ -4,7 +4,7 @@ namespace: agnetz
 resources:
   - namespace.yaml
   - configmap.yaml
-  - secret.yaml
+  - externalsecret.yaml
   - postgres-service.yaml
   - postgres-statefulset.yaml
   - backend-deployment.yaml

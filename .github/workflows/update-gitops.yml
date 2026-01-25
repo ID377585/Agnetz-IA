@@ -1,0 +1,151 @@
+name: Update GitOps Manifests
+
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: 'Image name (ex: ghcr.io/ID377585/backend)'
+        required: true
+      digest:
+        description: 'Image digest (ex: sha256:...)'
+        required: true
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  update-gitops:
+    runs-on: ubuntu-latest
+    env:
+      GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
+      GITOPS_PATH: ${{ secrets.GITOPS_PATH_STAGING }}
+      GITOPS_BASE: ${{ secrets.GITOPS_BRANCH_STAGING }}
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare GITOPS token (use App if available, otherwise fallback to secret)
+        id: prepare_token
+        run: |
+          set -euo pipefail
+
+          # if we have GitHub App secrets set, generate installation token
+          if [ -n "${{ secrets.GITOPS_APP_PRIVATE_KEY || '' }}" ]; then
+            echo "Using GitHub App to generate installation token..."
+
+            # write private key file
+            printf "%s\n" "${{ secrets.GITOPS_APP_PRIVATE_KEY }}" > /tmp/app_key.pem
+            chmod 600 /tmp/app_key.pem
+
+            APP_ID="${{ secrets.GITOPS_APP_ID }}"
+            INSTALLATION_ID="${{ secrets.GITOPS_APP_INSTALLATION_ID }}"
+
+            base64url() { openssl base64 -e | tr -d '=' | tr '/+' '_-' | tr -d '\n'; }
+
+            now=$(date +%s)
+            header='{"alg":"RS256","typ":"JWT"}'
+            payload=$(printf '{"iat":%d,"exp":%d,"iss":%s}' "$now" "$((now+600))" "$APP_ID")
+
+            h64=$(printf '%s' "$header" | base64url)
+            p64=$(printf '%s' "$payload" | base64url)
+            unsigned="${h64}.${p64}"
+            sig=$(printf '%s' "$unsigned" | openssl dgst -sha256 -sign /tmp/app_key.pem | base64url)
+            jwt="${unsigned}.${sig}"
+
+            token_json=$(curl -s -X POST \
+              -H "Authorization: Bearer ${jwt}" \
+              -H "Accept: application/vnd.github+json" \
+              "https://api.github.com/app/installations/${INSTALLATION_ID}/access_tokens")
+
+            installation_token=$(echo "$token_json" | jq -r .token)
+            if [ "$installation_token" = "null" ] || [ -z "$installation_token" ]; then
+              echo "Failed to create installation token:"
+              echo "$token_json"
+              exit 1
+            fi
+
+            echo "GITOPS_TOKEN=${installation_token}" >> $GITHUB_ENV
+          else
+            # fallback: expect a pre-created secret GITOPS_TOKEN (PAT or other token with repo write)
+            echo "No GitHub App configured, using GITOPS_TOKEN secret (must exist)."
+            if [ -z "${{ secrets.GITOPS_TOKEN || '' }}" ]; then
+              echo "ERROR: secrets.GITOPS_TOKEN missing and no GitHub App configured. Aborting."
+              exit 1
+            fi
+            echo "GITOPS_TOKEN=${{ secrets.GITOPS_TOKEN }}" >> $GITHUB_ENV
+          fi
+        shell: bash
+
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.GITOPS_REPO }}
+          token: ${{ env.GITOPS_TOKEN }}
+          path: gitops
+          fetch-depth: 0
+
+      - name: Configure git user
+        run: |
+          git -C gitops config user.name "github-actions[bot]"
+          git -C gitops config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump manifest image (example)
+        id: bump
+        run: |
+          set -euo pipefail
+          IMAGE="${{ github.event.inputs.image }}"
+          DIGEST="${{ github.event.inputs.digest }}"
+          echo "Updating manifests under gitops/${{ env.GITOPS_PATH }} to ${IMAGE}@${DIGEST}"
+
+          cd gitops/${{ env.GITOPS_PATH }}
+
+          # Example: replace image occurrences in yaml files (adjust pattern to your manifests)
+          # This simple sed replaces image lines like: image: ghcr.io/...@sha256:...
+          # You can use yq for structured edits.
+          find . -type f -name '*.yaml' -o -name '*.yml' | while read -r f; do
+            if grep -q "image: .*@" "$f"; then
+              sed -E -i.bak "s|image: .*@sha256:[a-f0-9]{64}|image: ${IMAGE}@${DIGEST}|g" "$f" || true
+            else
+              # try replacing tag style image: repo:tag  -> do nothing here or adapt
+              :
+            fi
+          done
+
+          # Remove backups created by sed on macOS
+          find . -type f -name '*.bak' -delete
+
+          # show diff (for logs)
+          git -C . status --porcelain
+          git -C . diff --name-only || true
+
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "chore(manifest): update image to ${IMAGE}@${DIGEST}"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create Promotion PR
+        if: steps.bump.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ env.GITOPS_TOKEN }}
+          repository: ${{ env.GITOPS_REPO }}
+          base: ${{ env.GITOPS_BASE }}
+          head: update/backend-${{ github.run_id }}
+          title: "chore: promote ${{ github.event.inputs.image }}@${{ github.event.inputs.digest }}"
+          body: |
+            Automated promotion from CI.
+            Image: ${{ github.event.inputs.image }}@${{ github.event.inputs.digest }}
+          commit-message: "chore(manifest): update image to ${{ github.event.inputs.image }}@${{ github.event.inputs.digest }}"
+
+      - name: No-op when no changes
+        if: steps.bump.outputs.changed == 'false'
+        run: echo "No manifest changes required; nothing to do."

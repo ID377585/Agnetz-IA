@@ -1,12 +1,21 @@
-name: Build, Tag & Push images (with SBOM, Scan & GitOps update)
+name: Build, Scan, Push & Update GitOps
 
 on:
   push:
     branches:
       - main
     tags:
-      - 'v*'             # quando um tag vX.Y.Z for pushado
-  workflow_dispatch:    # permite disparar manualmente
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: 'Target environment (auto/staging/prod)'
+        required: false
+        default: 'auto'
+      image_tag:
+        description: 'Override image tag for GitOps update (optional)'
+        required: false
+        default: ''
 
 env:
   REGISTRY: ghcr.io
@@ -18,236 +27,406 @@ permissions:
   contents: write
   packages: write
   pull-requests: write
+  id-token: write
 
 jobs:
-  build-push:
+  build-images:
     runs-on: ubuntu-latest
     concurrency:
-      group: build-push
+      group: build-images
       cancel-in-progress: true
 
+    outputs:
+      backend_digest: ${{ steps.backend_digest.outputs.backend_digest }}
+      frontend_digest: ${{ steps.frontend_digest.outputs.frontend_digest }}
+      image_tag: ${{ steps.tags.outputs.image_tag }}
+      deploy_env: ${{ steps.tags.outputs.deploy_env }}
+
     steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - name: Setup QEMU (multiarch)
-      uses: docker/setup-qemu-action@v2
+      - name: Setup QEMU (multiarch)
+        uses: docker/setup-qemu-action@v2
 
-    - name: Setup Docker buildx
-      uses: docker/setup-buildx-action@v2
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
 
-    - name: Login to registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        # prefere GHCR_TOKEN (repo secret), senão usa GITHUB_TOKEN
-        password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+      - name: Login to registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
 
-    - name: Determine image tags and envs
-      id: tags
-      run: |
-        set -eux
-        SHORT_SHA=${GITHUB_SHA:0:7}
-        echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+      - name: Determine image tags and target env
+        id: tags
+        run: |
+          set -eux
+          SHORT_SHA=${GITHUB_SHA:0:7}
+          echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
 
-        # Detect if this is a release tag push (vX.Y.Z)
-        if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-          RELEASE_TAG=${GITHUB_REF#refs/tags/}
-          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
-          echo "is_release=true" >> $GITHUB_OUTPUT
-        else
-          echo "release_tag=" >> $GITHUB_OUTPUT
-          echo "is_release=false" >> $GITHUB_OUTPUT
-          RELEASE_TAG=""
-        fi
+          INPUT_ENV="${{ github.event.inputs.deploy_env }}"
+          if [[ -z "$INPUT_ENV" ]]; then
+            INPUT_ENV="auto"
+          fi
 
-        # Build comma-separated tag lists (docker/build-push-action accepts newline or comma)
-        # include :short_sha and :latest always, and release tag only when present
-        if [[ -n "${RELEASE_TAG}" ]]; then
-          echo "BACKEND_TAGS=${BACKEND_IMAGE}:${SHORT_SHA},${BACKEND_IMAGE}:latest,${BACKEND_IMAGE}:${RELEASE_TAG}" >> $GITHUB_ENV
-          echo "FRONTEND_TAGS=${FRONTEND_IMAGE}:${SHORT_SHA},${FRONTEND_IMAGE}:latest,${FRONTEND_IMAGE}:${RELEASE_TAG}" >> $GITHUB_ENV
-        else
-          echo "BACKEND_TAGS=${BACKEND_IMAGE}:${SHORT_SHA},${BACKEND_IMAGE}:latest" >> $GITHUB_ENV
-          echo "FRONTEND_TAGS=${FRONTEND_IMAGE}:${SHORT_SHA},${FRONTEND_IMAGE}:latest" >> $GITHUB_ENV
-        fi
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            RELEASE_TAG=${GITHUB_REF#refs/tags/}
+            echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "release_tag=" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            RELEASE_TAG=""
+          fi
 
-    ### BACKEND build/push
-    - name: Build & push backend image
-      id: backend_build
-      uses: docker/build-push-action@v4
-      with:
-        context: ./backend
-        file: ./backend/Dockerfile
-        push: true
-        platforms: linux/amd64,linux/arm64
-        tags: ${{ env.BACKEND_TAGS }}
-        # request output digest for the first tag
-        outputs: type=digest
+          # determine environment
+          if [[ "$INPUT_ENV" != "auto" ]]; then
+            DEPLOY_ENV="$INPUT_ENV"
+          else
+            if [[ "$RELEASE_TAG" == *-rc.* ]]; then
+              DEPLOY_ENV="staging"
+            elif [[ -n "$RELEASE_TAG" ]]; then
+              DEPLOY_ENV="prod"
+            else
+              DEPLOY_ENV="staging"
+            fi
+          fi
+          echo "deploy_env=${DEPLOY_ENV}" >> $GITHUB_OUTPUT
 
-    - name: Resolve backend digest (fallback to imagetools if needed)
-      id: backend_digest
-      run: |
-        set -eux
-        # prefer the action output
-        DIGEST="${{ steps.backend_build.outputs.digest }}"
-        if [[ -z "$DIGEST" ]]; then
-          # fallback: inspect the pushed image by short SHA tag
-          SHORT_TAG="${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.short_sha }}"
-          echo "backend: digest not returned by action, inspecting $SHORT_TAG"
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-          DIGEST=$(docker buildx imagetools inspect --raw "$SHORT_TAG" | jq -r '.manifests[0].digest')
-        fi
-        echo "BACKEND_DIGEST=$DIGEST" >> $GITHUB_ENV
-        echo "backend_digest=$DIGEST" >> $GITHUB_OUTPUT
+          # UX tag for manifests
+          if [[ -n "${{ github.event.inputs.image_tag }}" ]]; then
+            IMAGE_TAG="${{ github.event.inputs.image_tag }}"
+          elif [[ -n "$RELEASE_TAG" ]]; then
+            IMAGE_TAG="$RELEASE_TAG"
+          else
+            IMAGE_TAG="$SHORT_SHA"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
-    - name: Generate SBOM for backend (syft)
-      if: always()
-      run: |
-        set -eux
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-        syft "${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}" -o json > sbom-backend.json || true
-      env:
-        DOCKER_CLI_EXPERIMENTAL: enabled
+          # Build tag lists
+          if [[ -n "$RELEASE_TAG" ]]; then
+            echo "BACKEND_TAGS=${BACKEND_IMAGE}:${SHORT_SHA},${BACKEND_IMAGE}:latest,${BACKEND_IMAGE}:${RELEASE_TAG}" >> $GITHUB_ENV
+            echo "FRONTEND_TAGS=${FRONTEND_IMAGE}:${SHORT_SHA},${FRONTEND_IMAGE}:latest,${FRONTEND_IMAGE}:${RELEASE_TAG}" >> $GITHUB_ENV
+          else
+            echo "BACKEND_TAGS=${BACKEND_IMAGE}:${SHORT_SHA},${BACKEND_IMAGE}:latest" >> $GITHUB_ENV
+            echo "FRONTEND_TAGS=${FRONTEND_IMAGE}:${SHORT_SHA},${FRONTEND_IMAGE}:latest" >> $GITHUB_ENV
+          fi
 
-    - name: Trivy scan backend
-      uses: aquasecurity/trivy-action@v1
-      with:
-        image-ref: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}
-        format: table
-        exit-code: '1'   # fail on vulnerabilities (ajuste conforme política)
-      continue-on-error: false
+      # BACKEND build/push
+      - name: Build & push backend image
+        id: backend_build
+        uses: docker/build-push-action@v4
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.BACKEND_TAGS }}
+          outputs: type=digest
 
-    ### FRONTEND build/push
-    - name: Build & push frontend image
-      id: frontend_build
-      uses: docker/build-push-action@v4
-      with:
-        context: ./frontend
-        file: ./frontend/Dockerfile
-        push: true
-        platforms: linux/amd64,linux/arm64
-        tags: ${{ env.FRONTEND_TAGS }}
-        outputs: type=digest
+      - name: Resolve backend digest (fallback to imagetools if needed)
+        id: backend_digest
+        run: |
+          set -eux
+          DIGEST="${{ steps.backend_build.outputs.digest }}"
+          if [[ -z "$DIGEST" ]]; then
+            SHORT_TAG="${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.short_sha }}"
+            echo "backend: digest not returned by action, inspecting $SHORT_TAG"
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+            DIGEST=$(docker buildx imagetools inspect --raw "$SHORT_TAG" | jq -r '.manifests[0].digest')
+          fi
+          echo "BACKEND_DIGEST=$DIGEST" >> $GITHUB_ENV
+          echo "backend_digest=$DIGEST" >> $GITHUB_OUTPUT
 
-    - name: Resolve frontend digest (fallback)
-      id: frontend_digest
-      run: |
-        set -eux
-        DIGEST="${{ steps.frontend_build.outputs.digest }}"
-        if [[ -z "$DIGEST" ]]; then
-          SHORT_TAG="${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.short_sha }}"
-          sudo apt-get update -y
-          sudo apt-get install -y jq
-          DIGEST=$(docker buildx imagetools inspect --raw "$SHORT_TAG" | jq -r '.manifests[0].digest')
-        fi
-        echo "FRONTEND_DIGEST=$DIGEST" >> $GITHUB_ENV
-        echo "frontend_digest=$DIGEST" >> $GITHUB_OUTPUT
+      - name: Generate SBOM for backend (syft)
+        if: always()
+        run: |
+          set -eux
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft "${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}" -o json > sbom-backend.json || true
+        env:
+          DOCKER_CLI_EXPERIMENTAL: enabled
 
-    - name: Generate SBOM for frontend (syft)
-      if: always()
-      run: |
-        set -eux
-        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
-        syft "${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}" -o json > sbom-frontend.json || true
+      - name: Trivy scan backend
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}
+          format: table
+          exit-code: '1'
+        continue-on-error: false
 
-    - name: Trivy scan frontend
-      uses: aquasecurity/trivy-action@v1
-      with:
-        image-ref: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}
-        format: table
-        exit-code: '1'
-      continue-on-error: false
+      # FRONTEND build/push
+      - name: Build & push frontend image
+        id: frontend_build
+        uses: docker/build-push-action@v4
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ env.FRONTEND_TAGS }}
+          outputs: type=digest
 
-    # Optional: collect artifacts (SBOMs) for later review
-    - name: Upload SBOM artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: sboms
-        path: |
-          sbom-backend.json
-          sbom-frontend.json
+      - name: Resolve frontend digest (fallback)
+        id: frontend_digest
+        run: |
+          set -eux
+          DIGEST="${{ steps.frontend_build.outputs.digest }}"
+          if [[ -z "$DIGEST" ]]; then
+            SHORT_TAG="${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.short_sha }}"
+            sudo apt-get update -y
+            sudo apt-get install -y jq
+            DIGEST=$(docker buildx imagetools inspect --raw "$SHORT_TAG" | jq -r '.manifests[0].digest')
+          fi
+          echo "FRONTEND_DIGEST=$DIGEST" >> $GITHUB_ENV
+          echo "frontend_digest=$DIGEST" >> $GITHUB_OUTPUT
 
-    # ===== Update GitOps repo with digest pinned images =====
-    - name: Checkout GitOps repo
-      uses: actions/checkout@v4
-      with:
-        repository: ${{ secrets.GITOPS_REPO }}
-        token: ${{ secrets.GITHUB_TOKEN }}
-        path: gitops
+      - name: Generate SBOM for frontend (syft)
+        if: always()
+        run: |
+          set -eux
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+          syft "${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}" -o json > sbom-frontend.json || true
 
-    - name: Update backend & frontend manifests with digests
-      id: update_manifests
-      run: |
-        set -eux
-        # Paths in GitOps repo should be adjusted by you via GITOPS_PATH secret.
-        # We support two files: backend/deployment.yaml and frontend/deployment.yaml under GITOPS_PATH
-        BASE_PATH="gitops/${{ secrets.GITOPS_PATH }}"
-        BACK_MANIFEST="${BASE_PATH}/backend/deployment.yaml"
-        FRONT_MANIFEST="${BASE_PATH}/frontend/deployment.yaml"
+      - name: Trivy scan frontend
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          image-ref: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}
+          format: table
+          exit-code: '1'
+        continue-on-error: false
 
-        if [[ -f "$BACK_MANIFEST" ]]; then
-          echo "Updating backend manifest: $BACK_MANIFEST"
-          sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}|g" "$BACK_MANIFEST"
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sboms
+          path: |
+            sbom-backend.json
+            sbom-frontend.json
+
+  update-gitops-staging:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: needs.build-images.outputs.deploy_env == 'staging'
+    environment: staging
+
+    steps:
+      - name: Parse GitOps repo
+        id: gitops_repo
+        run: |
+          set -eux
+          OWNER="${GITOPS_REPO%%/*}"
+          REPO="${GITOPS_REPO##*/}"
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+        env:
+          GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
+
+      - name: Create GitOps App token
+        id: gitops_token
+        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITOPS_APP_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.gitops_repo.outputs.owner }}
+          repositories: ${{ steps.gitops_repo.outputs.repo }}
+
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          ref: ${{ secrets.GITOPS_BRANCH_STAGING }}
+          path: gitops
+
+      - name: Update manifests (staging)
+        id: update_manifests
+        run: |
+          set -eux
+          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_STAGING }}"
+          IMAGE_TAG="${{ needs.build-images.outputs.image_tag }}"
+
           git -C gitops config user.email "actions@github.com"
           git -C gitops config user.name "github-actions"
-          git -C gitops add "$BACK_MANIFEST"
-        else
-          echo "Warning: backend manifest not found at $BACK_MANIFEST"
-        fi
 
-        if [[ -f "$FRONT_MANIFEST" ]]; then
-          echo "Updating frontend manifest: $FRONT_MANIFEST"
-          sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}|g" "$FRONT_MANIFEST"
-          git -C gitops add "$FRONT_MANIFEST"
-        else
-          echo "Warning: frontend manifest not found at $FRONT_MANIFEST"
-        fi
+          BACK_MANIFESTS=(
+            "${BASE_PATH}/backend/rollout.yaml"
+            "${BASE_PATH}/backend/deployment.yaml"
+          )
+          FRONT_MANIFESTS=(
+            "${BASE_PATH}/frontend/rollout.yaml"
+            "${BASE_PATH}/frontend/deployment.yaml"
+          )
 
-        # create branch and push
-        BRANCH="update/images-${{ steps.tags.outputs.short_sha }}"
-        git -C gitops checkout -b "$BRANCH"
-        if git -C gitops diff --staged --quiet; then
-          echo "No changes to commit"
-          echo "pr_created=false" >> $GITHUB_OUTPUT
-          exit 0
-        fi
-        git -C gitops commit -m "chore: update images to backend@${{ env.BACKEND_DIGEST }} frontend@${{ env.FRONTEND_DIGEST }}"
-        git -C gitops push --set-upstream origin "$BRANCH"
-        echo "gitops_branch=$BRANCH" >> $GITHUB_OUTPUT
-        echo "pr_created=true" >> $GITHUB_OUTPUT
+          for MANIFEST in "${BACK_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.backend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
 
-    - name: Create PR in GitOps repo
-      if: steps.update_manifests.outputs.pr_created == 'true'
-      id: create_pr
-      uses: peter-evans/create-pull-request@v5
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ secrets.GITOPS_REPO }}
-        base: ${{ secrets.GITOPS_BRANCH }}
-        head: ${{ steps.update_manifests.outputs.gitops_branch }}
-        title: "chore: update images to ${ { steps.tags.outputs.short_sha } }"
-        body: |
-          Automated image update by CI.
-          Backend: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}
-          Frontend: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}
-        draft: false
-        labels: automated,ci
+          for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.frontend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
 
-    - name: Enable auto-merge for the PR (if created)
-      if: steps.update_manifests.outputs.pr_created == 'true'
-      uses: peter-evans/enable-pull-request-automerge@v2
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ secrets.GITOPS_REPO }}
-        pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
-        merge-method: squash
+          BRANCH="update/images-${{ github.run_id }}-${{ github.run_attempt }}"
+          if git -C gitops diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "pr_created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "gitops_branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "pr_created=true" >> $GITHUB_OUTPUT
 
-    - name: Output result
-      run: |
-        echo "Backend digest: ${{ env.BACKEND_DIGEST }}"
-        echo "Frontend digest: ${{ env.FRONTEND_DIGEST }}"
-        echo "GitOps PR created: ${{ steps.update_manifests.outputs.pr_created }}"
+      - name: Create PR in GitOps repo
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        id: create_pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          path: gitops
+          base: ${{ secrets.GITOPS_BRANCH_STAGING }}
+          branch: ${{ steps.update_manifests.outputs.gitops_branch }}
+          title: "chore: update images to ${{ needs.build-images.outputs.image_tag }}"
+          body: |
+            Automated image update by CI.
+            Backend: ${{ env.BACKEND_IMAGE }}@${{ needs.build-images.outputs.backend_digest }}
+            Frontend: ${{ env.FRONTEND_IMAGE }}@${{ needs.build-images.outputs.frontend_digest }}
+          draft: false
+          labels: automated,ci
+
+      - name: Enable auto-merge for the PR (if created)
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+          merge-method: squash
+
+  update-gitops-prod:
+    runs-on: ubuntu-latest
+    needs: build-images
+    if: needs.build-images.outputs.deploy_env == 'prod'
+    environment: production
+
+    steps:
+      - name: Parse GitOps repo
+        id: gitops_repo
+        run: |
+          set -eux
+          OWNER="${GITOPS_REPO%%/*}"
+          REPO="${GITOPS_REPO##*/}"
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+        env:
+          GITOPS_REPO: ${{ secrets.GITOPS_REPO }}
+
+      - name: Create GitOps App token
+        id: gitops_token
+        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.GITOPS_APP_ID }}
+          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          owner: ${{ steps.gitops_repo.outputs.owner }}
+          repositories: ${{ steps.gitops_repo.outputs.repo }}
+
+      - name: Change-freeze check (prod)
+        run: |
+          set -eux
+          if [[ -n "${{ secrets.CHANGE_FREEZE_WINDOWS }}" ]]; then
+            TODAY=$(date -u +%F)
+            IFS="," read -ra RANGES <<< "${{ secrets.CHANGE_FREEZE_WINDOWS }}"
+            for RANGE in "${RANGES[@]}"; do
+              START="${RANGE%%..*}"
+              END="${RANGE##*..}"
+              if [[ "$TODAY" > "$START" && "$TODAY" < "$END" ]] || [[ "$TODAY" == "$START" ]] || [[ "$TODAY" == "$END" ]]; then
+                echo "Change freeze active for $RANGE (today: $TODAY)"
+                exit 1
+              fi
+            done
+          fi
+
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          ref: ${{ secrets.GITOPS_BRANCH_PROD }}
+          path: gitops
+
+      - name: Update manifests (prod)
+        id: update_manifests
+        run: |
+          set -eux
+          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+          IMAGE_TAG="${{ needs.build-images.outputs.image_tag }}"
+
+          git -C gitops config user.email "actions@github.com"
+          git -C gitops config user.name "github-actions"
+
+          BACK_MANIFESTS=(
+            "${BASE_PATH}/backend/rollout.yaml"
+            "${BASE_PATH}/backend/deployment.yaml"
+          )
+          FRONT_MANIFESTS=(
+            "${BASE_PATH}/frontend/rollout.yaml"
+            "${BASE_PATH}/frontend/deployment.yaml"
+          )
+
+          for MANIFEST in "${BACK_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.backend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
+
+          for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
+            if [[ -f "$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.frontend_digest }}|g" "$MANIFEST"
+              git -C gitops add "$MANIFEST"
+            fi
+          done
+
+          BRANCH="update/images-${{ github.run_id }}-${{ github.run_attempt }}"
+          if git -C gitops diff --staged --quiet; then
+            echo "No changes to commit"
+            echo "pr_created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          echo "gitops_branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "pr_created=true" >> $GITHUB_OUTPUT
+
+      - name: Create PR in GitOps repo
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        id: create_pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          path: gitops
+          base: ${{ secrets.GITOPS_BRANCH_PROD }}
+          branch: ${{ steps.update_manifests.outputs.gitops_branch }}
+          title: "chore: update images to ${{ needs.build-images.outputs.image_tag }}"
+          body: |
+            Automated image update by CI.
+            Backend: ${{ env.BACKEND_IMAGE }}@${{ needs.build-images.outputs.backend_digest }}
+            Frontend: ${{ env.FRONTEND_IMAGE }}@${{ needs.build-images.outputs.frontend_digest }}
+          draft: false
+          labels: automated,ci
+
+      - name: Enable auto-merge for the PR (if created)
+        if: steps.update_manifests.outputs.pr_created == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        with:
+          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+          merge-method: squash
