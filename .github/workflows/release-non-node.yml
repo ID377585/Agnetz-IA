@@ -1,0 +1,92 @@
+name: Release (non-node - conventional commits simple)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node (for semver tool)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Get last tag
+        id: last_tag
+        run: |
+          set -eux
+          git fetch --tags
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          echo "last_tag=${LAST_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Determine bump type from commits
+        id: bump
+        run: |
+          set -eux
+          LAST=${{ steps.last_tag.outputs.last_tag }}
+          if [ "$LAST" = "" ]; then
+            LAST="v0.0.0"
+          fi
+          COMMITS=$(git log ${LAST}..HEAD --pretty=%B || true)
+          echo "commits=${COMMITS}" > /tmp/commits.txt
+
+          # default is patch
+          BUMP="patch"
+
+          # breaking change check (explicit BREAKING CHANGE or ! after type)
+          if echo "$COMMITS" | grep -qi "BREAKING CHANGE"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -Eqi "^[a-z]+\\(.*\\)\\!:" ; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -Eqi "^.*!:.*"; then
+            BUMP="major"
+          elif echo "$COMMITS" | grep -Eqi "(^|\n)feat(\(|:)" ; then
+            BUMP="minor"
+          elif echo "$COMMITS" | grep -Eqi "(^|\n)fix(\(|:)" ; then
+            BUMP="patch"
+          else
+            BUMP="patch"
+          fi
+
+          echo "bump_type=$BUMP" >> $GITHUB_OUTPUT
+
+      - name: Bump semver and create tag
+        id: new_tag
+        run: |
+          set -eux
+          LAST=${{ steps.last_tag.outputs.last_tag }}
+          if [ -z "$LAST" ]; then
+            LAST=v0.0.0
+          fi
+          # use npx semver to increment
+          NEW_TAG=$(npx -y semver "$LAST" -i "${{ steps.bump.outputs.bump_type }}")
+          # semver returns without v sometimes, ensure leading v
+          if [[ "$NEW_TAG" != v* ]]; then
+            NEW_TAG="v$NEW_TAG"
+          fi
+          echo "new_tag=$NEW_TAG" >> $GITHUB_OUTPUT
+          git tag "$NEW_TAG"
+          git push origin "$NEW_TAG"
+
+      - name: Create GitHub Release
+        uses: peter-evans/create-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag_name: ${{ steps.new_tag.outputs.new_tag }}
+          name: ${{ steps.new_tag.outputs.new_tag }}
+          body: |
+            Automated release ${ { steps.new_tag.outputs.new_tag } } created from conventional commits.
+          draft: false
+          prerelease: false

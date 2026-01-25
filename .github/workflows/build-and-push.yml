@@ -1,0 +1,253 @@
+name: Build, Tag & Push images (with SBOM, Scan & GitOps update)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'             # quando um tag vX.Y.Z for pushado
+  workflow_dispatch:    # permite disparar manualmente
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: id377585
+  BACKEND_IMAGE: ghcr.io/id377585/agnetz-ia-backend
+  FRONTEND_IMAGE: ghcr.io/id377585/agnetz-ia-frontend
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: build-push
+      cancel-in-progress: true
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup QEMU (multiarch)
+      uses: docker/setup-qemu-action@v2
+
+    - name: Setup Docker buildx
+      uses: docker/setup-buildx-action@v2
+
+    - name: Login to registry
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        # prefere GHCR_TOKEN (repo secret), senão usa GITHUB_TOKEN
+        password: ${{ secrets.GHCR_TOKEN || secrets.GITHUB_TOKEN }}
+
+    - name: Determine image tags and envs
+      id: tags
+      run: |
+        set -eux
+        SHORT_SHA=${GITHUB_SHA:0:7}
+        echo "short_sha=${SHORT_SHA}" >> $GITHUB_OUTPUT
+
+        # Detect if this is a release tag push (vX.Y.Z)
+        if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+          RELEASE_TAG=${GITHUB_REF#refs/tags/}
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "is_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "release_tag=" >> $GITHUB_OUTPUT
+          echo "is_release=false" >> $GITHUB_OUTPUT
+          RELEASE_TAG=""
+        fi
+
+        # Build comma-separated tag lists (docker/build-push-action accepts newline or comma)
+        # include :short_sha and :latest always, and release tag only when present
+        if [[ -n "${RELEASE_TAG}" ]]; then
+          echo "BACKEND_TAGS=${BACKEND_IMAGE}:${SHORT_SHA},${BACKEND_IMAGE}:latest,${BACKEND_IMAGE}:${RELEASE_TAG}" >> $GITHUB_ENV
+          echo "FRONTEND_TAGS=${FRONTEND_IMAGE}:${SHORT_SHA},${FRONTEND_IMAGE}:latest,${FRONTEND_IMAGE}:${RELEASE_TAG}" >> $GITHUB_ENV
+        else
+          echo "BACKEND_TAGS=${BACKEND_IMAGE}:${SHORT_SHA},${BACKEND_IMAGE}:latest" >> $GITHUB_ENV
+          echo "FRONTEND_TAGS=${FRONTEND_IMAGE}:${SHORT_SHA},${FRONTEND_IMAGE}:latest" >> $GITHUB_ENV
+        fi
+
+    ### BACKEND build/push
+    - name: Build & push backend image
+      id: backend_build
+      uses: docker/build-push-action@v4
+      with:
+        context: ./backend
+        file: ./backend/Dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ env.BACKEND_TAGS }}
+        # request output digest for the first tag
+        outputs: type=digest
+
+    - name: Resolve backend digest (fallback to imagetools if needed)
+      id: backend_digest
+      run: |
+        set -eux
+        # prefer the action output
+        DIGEST="${{ steps.backend_build.outputs.digest }}"
+        if [[ -z "$DIGEST" ]]; then
+          # fallback: inspect the pushed image by short SHA tag
+          SHORT_TAG="${{ env.BACKEND_IMAGE }}:${{ steps.tags.outputs.short_sha }}"
+          echo "backend: digest not returned by action, inspecting $SHORT_TAG"
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          DIGEST=$(docker buildx imagetools inspect --raw "$SHORT_TAG" | jq -r '.manifests[0].digest')
+        fi
+        echo "BACKEND_DIGEST=$DIGEST" >> $GITHUB_ENV
+        echo "backend_digest=$DIGEST" >> $GITHUB_OUTPUT
+
+    - name: Generate SBOM for backend (syft)
+      if: always()
+      run: |
+        set -eux
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        syft "${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}" -o json > sbom-backend.json || true
+      env:
+        DOCKER_CLI_EXPERIMENTAL: enabled
+
+    - name: Trivy scan backend
+      uses: aquasecurity/trivy-action@v1
+      with:
+        image-ref: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}
+        format: table
+        exit-code: '1'   # fail on vulnerabilities (ajuste conforme política)
+      continue-on-error: false
+
+    ### FRONTEND build/push
+    - name: Build & push frontend image
+      id: frontend_build
+      uses: docker/build-push-action@v4
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        platforms: linux/amd64,linux/arm64
+        tags: ${{ env.FRONTEND_TAGS }}
+        outputs: type=digest
+
+    - name: Resolve frontend digest (fallback)
+      id: frontend_digest
+      run: |
+        set -eux
+        DIGEST="${{ steps.frontend_build.outputs.digest }}"
+        if [[ -z "$DIGEST" ]]; then
+          SHORT_TAG="${{ env.FRONTEND_IMAGE }}:${{ steps.tags.outputs.short_sha }}"
+          sudo apt-get update -y
+          sudo apt-get install -y jq
+          DIGEST=$(docker buildx imagetools inspect --raw "$SHORT_TAG" | jq -r '.manifests[0].digest')
+        fi
+        echo "FRONTEND_DIGEST=$DIGEST" >> $GITHUB_ENV
+        echo "frontend_digest=$DIGEST" >> $GITHUB_OUTPUT
+
+    - name: Generate SBOM for frontend (syft)
+      if: always()
+      run: |
+        set -eux
+        curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin
+        syft "${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}" -o json > sbom-frontend.json || true
+
+    - name: Trivy scan frontend
+      uses: aquasecurity/trivy-action@v1
+      with:
+        image-ref: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}
+        format: table
+        exit-code: '1'
+      continue-on-error: false
+
+    # Optional: collect artifacts (SBOMs) for later review
+    - name: Upload SBOM artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: sboms
+        path: |
+          sbom-backend.json
+          sbom-frontend.json
+
+    # ===== Update GitOps repo with digest pinned images =====
+    - name: Checkout GitOps repo
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ secrets.GITOPS_REPO }}
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: gitops
+
+    - name: Update backend & frontend manifests with digests
+      id: update_manifests
+      run: |
+        set -eux
+        # Paths in GitOps repo should be adjusted by you via GITOPS_PATH secret.
+        # We support two files: backend/deployment.yaml and frontend/deployment.yaml under GITOPS_PATH
+        BASE_PATH="gitops/${{ secrets.GITOPS_PATH }}"
+        BACK_MANIFEST="${BASE_PATH}/backend/deployment.yaml"
+        FRONT_MANIFEST="${BASE_PATH}/frontend/deployment.yaml"
+
+        if [[ -f "$BACK_MANIFEST" ]]; then
+          echo "Updating backend manifest: $BACK_MANIFEST"
+          sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}|g" "$BACK_MANIFEST"
+          git -C gitops config user.email "actions@github.com"
+          git -C gitops config user.name "github-actions"
+          git -C gitops add "$BACK_MANIFEST"
+        else
+          echo "Warning: backend manifest not found at $BACK_MANIFEST"
+        fi
+
+        if [[ -f "$FRONT_MANIFEST" ]]; then
+          echo "Updating frontend manifest: $FRONT_MANIFEST"
+          sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}|g" "$FRONT_MANIFEST"
+          git -C gitops add "$FRONT_MANIFEST"
+        else
+          echo "Warning: frontend manifest not found at $FRONT_MANIFEST"
+        fi
+
+        # create branch and push
+        BRANCH="update/images-${{ steps.tags.outputs.short_sha }}"
+        git -C gitops checkout -b "$BRANCH"
+        if git -C gitops diff --staged --quiet; then
+          echo "No changes to commit"
+          echo "pr_created=false" >> $GITHUB_OUTPUT
+          exit 0
+        fi
+        git -C gitops commit -m "chore: update images to backend@${{ env.BACKEND_DIGEST }} frontend@${{ env.FRONTEND_DIGEST }}"
+        git -C gitops push --set-upstream origin "$BRANCH"
+        echo "gitops_branch=$BRANCH" >> $GITHUB_OUTPUT
+        echo "pr_created=true" >> $GITHUB_OUTPUT
+
+    - name: Create PR in GitOps repo
+      if: steps.update_manifests.outputs.pr_created == 'true'
+      id: create_pr
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ secrets.GITOPS_REPO }}
+        base: ${{ secrets.GITOPS_BRANCH }}
+        head: ${{ steps.update_manifests.outputs.gitops_branch }}
+        title: "chore: update images to ${ { steps.tags.outputs.short_sha } }"
+        body: |
+          Automated image update by CI.
+          Backend: ${{ env.BACKEND_IMAGE }}@${{ env.BACKEND_DIGEST }}
+          Frontend: ${{ env.FRONTEND_IMAGE }}@${{ env.FRONTEND_DIGEST }}
+        draft: false
+        labels: automated,ci
+
+    - name: Enable auto-merge for the PR (if created)
+      if: steps.update_manifests.outputs.pr_created == 'true'
+      uses: peter-evans/enable-pull-request-automerge@v2
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ secrets.GITOPS_REPO }}
+        pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+        merge-method: squash
+
+    - name: Output result
+      run: |
+        echo "Backend digest: ${{ env.BACKEND_DIGEST }}"
+        echo "Frontend digest: ${{ env.FRONTEND_DIGEST }}"
+        echo "GitOps PR created: ${{ steps.update_manifests.outputs.pr_created }}"

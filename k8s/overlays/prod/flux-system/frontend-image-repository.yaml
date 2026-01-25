@@ -1,0 +1,8 @@
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: ImageRepository
+metadata:
+  name: frontend-repo
+  namespace: flux-system
+spec:
+  image: ghcr.io/id377585/agnetz-ia-frontend
+  interval: 1m

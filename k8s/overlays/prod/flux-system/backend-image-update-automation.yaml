@@ -1,0 +1,21 @@
+apiVersion: image.toolkit.fluxcd.io/v1alpha1
+kind: ImageUpdateAutomation
+metadata:
+  name: image-update-automation
+  namespace: flux-system
+spec:
+  interval: 1m
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: ci-bot@yourdomain.example
+        name: ci-bot
+    push:
+      branch: main
+  update:
+    path: "./k8s/overlays/prod"
+    strategy:
+      type: Setters

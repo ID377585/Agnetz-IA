@@ -1,0 +1,68 @@
+name: Promote to Prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      digest:
+        description: 'Image digest (sha256:...) to promote'
+        required: true
+      image:
+        description: 'Full image name without digest (eg ghcr.io/id377585/agnetz-ia-backend)'
+        required: true
+      manifest_subpath:
+        description: 'Relative path inside GITOPS_PATH for the manifest (eg backend/deployment.yaml)'
+        required: true
+        default: 'backend/deployment.yaml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          path: gitops
+          fetch-depth: 0
+
+      - name: Promote manifest
+        run: |
+          set -eux
+          DIGEST="${{ github.event.inputs.digest }}"
+          IMAGE="${{ github.event.inputs.image }}"
+          MANIFEST_FILE="gitops/${{ secrets.GITOPS_PATH }}/${{ github.event.inputs.manifest_subpath }}"
+
+          if [ ! -f "$MANIFEST_FILE" ]; then
+            echo "Manifest not found: $MANIFEST_FILE"
+            exit 1
+          fi
+
+          git -C gitops config user.email "actions@github.com"
+          git -C gitops config user.name "github-actions"
+
+          BRANCH="promote/$(echo $IMAGE | tr '/:' '-' )-${DIGEST//:/-}"
+          git -C gitops checkout -b "$BRANCH"
+
+          # Replace the image line with pinned digest
+          sed -E -i "s|image: .*|image: ${IMAGE}@${DIGEST}|g" "$MANIFEST_FILE"
+
+          git -C gitops add "$MANIFEST_FILE"
+          git -C gitops commit -m "chore: promote ${IMAGE}@${DIGEST} to prod" || echo "no changes to commit"
+          git -C gitops push --set-upstream origin "$BRANCH"
+
+      - name: Create PR to promote
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ secrets.GITOPS_REPO }}
+          base: ${{ secrets.GITOPS_BRANCH }}
+          head: ${{ steps.promote.outputs.branch || github.run_id }}
+          title: "chore: promote ${ { github.event.inputs.image } }@${{ github.event.inputs.digest }} to prod"
+          body: |
+            Promotion triggered by manual workflow.
+            Image: ${{ github.event.inputs.image }}@${{ github.event.inputs.digest }}
+          labels: automated, promote

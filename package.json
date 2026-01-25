@@ -1,20 +1,23 @@
-{
+{ 
   "name": "agnetz-ia",
   "version": "1.0.0",
   "description": "Agnetz.IA (CLI local com Ollama)",
   "type": "module",
-  "bin": {
-    "agnetz": "./agnetz.js"
-  },
+  "bin": { "agnetz": "./agnetz.js" },
   "scripts": {
     "start": "node ./agnetz.js",
     "chat": "node ./agnetz.js",
-    "test:ollama": "node ./tests/test-ollama.js"
+    "test:ollama": "node ./tests/test-ollama.js",
+    "release": "semantic-release"
   },
-  "dependencies": {
-    "execa": "^9.6.1"
+  "dependencies": { "execa": "^9.6.1" },
+  "devDependencies": {
+    "semantic-release": "^25.0.2",
+    "@semantic-release/changelog": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^9.2.6",
+    "@semantic-release/commit-analyzer": "^10.0.4",
+    "@semantic-release/release-notes-generator": "^11.0.7"
   },
-  "engines": {
-    "node": ">=18"
-  }
+  "engines": { "node": ">=18" }
 }
