@@ -1,11 +1,14 @@
+# .github/workflows/release.yml
 name: Release (semantic-release)
 
+# Executa automaticamente quando houver push em main e também permite execução manual
 on:
   push:
     branches:
       - main
   workflow_dispatch:
 
+# Permissões necessárias para o semantic-release criar tags, commits e releases
 permissions:
   contents: write
   packages: write
@@ -13,22 +16,33 @@ permissions:
 jobs:
   semantic-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          # fetch all history so semantic-release can find tags/commits correctly
           fetch-depth: 0
 
-      - name: Use Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
+      - name: Configure git (for @semantic-release/git)
+        # garante que commits feitos pelo semantic-release tenham autor válido
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Install dependencies
         run: npm ci
 
       - name: Run semantic-release
+        # NPM_TOKEN é opcional — só necessário se você publicar no npm
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release
