@@ -37,3 +37,4 @@ k8s/**/secret-*.yaml
 pub-cert.pem
 pub-cert.pem
 semantic-release-dry.log
+semantic-release-dry.log
