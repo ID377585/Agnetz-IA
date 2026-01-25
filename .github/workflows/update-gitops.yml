@@ -29,13 +29,16 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Prepare GITOPS token (use App if available, otherwise fallback to secret)
+      - name: Prepare GITOPS token (prefer PAT, fallback to GitHub App)
         id: prepare_token
         run: |
           set -euo pipefail
 
-          # if we have GitHub App secrets set, generate installation token
-          if [ -n "${{ secrets.GITOPS_APP_PRIVATE_KEY || '' }}" ]; then
+          # Prefer PAT if provided, then fallback to GitHub App
+          if [ -n "${{ secrets.GITOPS_TOKEN || '' }}" ]; then
+            echo "Using GITOPS_TOKEN secret."
+            echo "GITOPS_TOKEN=${{ secrets.GITOPS_TOKEN }}" >> $GITHUB_ENV
+          elif [ -n "${{ secrets.GITOPS_APP_PRIVATE_KEY || '' }}" ]; then
             echo "Using GitHub App to generate installation token..."
 
             # write private key file
@@ -71,13 +74,8 @@ jobs:
 
             echo "GITOPS_TOKEN=${installation_token}" >> $GITHUB_ENV
           else
-            # fallback: expect a pre-created secret GITOPS_TOKEN (PAT or other token with repo write)
-            echo "No GitHub App configured, using GITOPS_TOKEN secret (must exist)."
-            if [ -z "${{ secrets.GITOPS_TOKEN || '' }}" ]; then
-              echo "ERROR: secrets.GITOPS_TOKEN missing and no GitHub App configured. Aborting."
-              exit 1
-            fi
-            echo "GITOPS_TOKEN=${{ secrets.GITOPS_TOKEN }}" >> $GITHUB_ENV
+            echo "ERROR: secrets.GITOPS_TOKEN missing and no GitHub App configured. Aborting."
+            exit 1
           fi
         shell: bash
 
