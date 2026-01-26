@@ -133,7 +133,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ env.GITOPS_TOKEN }}
-          repository: ${{ env.GITOPS_REPO }}
+          path: gitops
           base: ${{ env.GITOPS_BASE }}
           head: update/backend-${{ github.run_id }}
           title: "chore: promote ${{ github.event.inputs.image }}@${{ github.event.inputs.digest }}"
