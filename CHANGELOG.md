@@ -1,3 +1,10 @@
+## [0.1.17](https://github.com/ID377585/Agnetz-IA/compare/v0.1.16...v0.1.17) (2026-01-26)
+
+
+### Bug Fixes
+
+* run promote even when smoke test skipped ([e4f65e3](https://github.com/ID377585/Agnetz-IA/commit/e4f65e376e36fc1bd3a8f0b27d7369a2f6c8261a))
+
 ## [0.1.16](https://github.com/ID377585/Agnetz-IA/compare/v0.1.15...v0.1.16) (2026-01-26)
 
 
