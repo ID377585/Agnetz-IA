@@ -1,3 +1,10 @@
+## [0.1.27](https://github.com/ID377585/Agnetz-IA/compare/v0.1.26...v0.1.27) (2026-01-26)
+
+
+### Bug Fixes
+
+* **vault:** align JWT audience and auth path ([6ab4eac](https://github.com/ID377585/Agnetz-IA/commit/6ab4eac45156adfb9abadd691a43b78865add7ed))
+
 ## [0.1.26](https://github.com/ID377585/Agnetz-IA/compare/v0.1.25...v0.1.26) (2026-01-26)
 
 
