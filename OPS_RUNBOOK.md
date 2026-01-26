@@ -53,6 +53,12 @@ Habilite no GitHub:
 - Rotacao e alertas: `gitops/k8s/secrets/ROTATION_POLICY.md`
 - Break-glass: `gitops/k8s/secrets/BREAK_GLASS.md`
 
+## 8) Audit de rotacao (CI)
+
+- Workflow: `.github/workflows/secrets-rotation-audit.yml`
+- Variaveis: `SECRET_PROVIDER`, `SECRETS_LIST`, `AWS_REGION`
+- Secret: `AWS_ROLE_ARN` (OIDC)
+
 ## 6) Smoke test (opcional)
 
 Se quiser validar staging antes de promover:
