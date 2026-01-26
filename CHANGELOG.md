@@ -1,3 +1,10 @@
+## [0.1.28](https://github.com/ID377585/Agnetz-IA/compare/v0.1.27...v0.1.28) (2026-01-26)
+
+
+### Bug Fixes
+
+* **vault:** align audience and workflow guards ([81c68f8](https://github.com/ID377585/Agnetz-IA/commit/81c68f8a6af16fe0d9b7c32466c3f22b56151aad))
+
 ## [0.1.27](https://github.com/ID377585/Agnetz-IA/compare/v0.1.26...v0.1.27) (2026-01-26)
 
 
