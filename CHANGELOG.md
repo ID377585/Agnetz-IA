@@ -1,3 +1,10 @@
+## [0.1.15](https://github.com/ID377585/Agnetz-IA/compare/v0.1.14...v0.1.15) (2026-01-26)
+
+
+### Bug Fixes
+
+* create PR from gitops repo path ([252dd77](https://github.com/ID377585/Agnetz-IA/commit/252dd778204b25654af350c38ca2277921e72a87))
+
 ## [0.1.14](https://github.com/ID377585/Agnetz-IA/compare/v0.1.13...v0.1.14) (2026-01-26)
 
 
