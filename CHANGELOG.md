@@ -1,3 +1,10 @@
+## [0.1.26](https://github.com/ID377585/Agnetz-IA/compare/v0.1.25...v0.1.26) (2026-01-26)
+
+
+### Bug Fixes
+
+* vault setup workflow env secrets ([129f471](https://github.com/ID377585/Agnetz-IA/commit/129f471c8c42bd5c2154953b9d70d839f6a61bd5))
+
 ## [0.1.25](https://github.com/ID377585/Agnetz-IA/compare/v0.1.24...v0.1.25) (2026-01-26)
 
 
