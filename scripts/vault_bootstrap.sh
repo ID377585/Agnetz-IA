@@ -20,8 +20,10 @@ vault write "auth/${JWT_PATH}/config" \
   bound_issuer="https://token.actions.githubusercontent.com" \
   jwks_url="https://token.actions.githubusercontent.com/.well-known/jwks"
 
-echo "Enabling KV v2 at ${VAULT_KV_MOUNT}..."
-vault secrets enable -path="${VAULT_KV_MOUNT}" kv-v2 || true
+echo "Ensuring KV v2 at ${VAULT_KV_MOUNT}..."
+if ! vault secrets list -format=json | jq -e "has(\"${VAULT_KV_MOUNT}/\")" >/dev/null 2>&1; then
+  vault secrets enable -path="${VAULT_KV_MOUNT}" kv-v2
+fi
 
 cat > /tmp/agnetz-ci-policy.hcl <<EOF
 path "${VAULT_KV_MOUNT}/metadata/agnetz/*" {
@@ -45,8 +47,16 @@ vault write "auth/${JWT_PATH}/role/${ROLE_NAME}" \
   ttl="15m"
 
 echo "Seeding example secrets metadata..."
-now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-exp=$(date -u -d "+90 days" +%Y-%m-%dT%H:%M:%SZ)
+now=$(python - <<'PY'
+import datetime as d
+print(d.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
+PY
+)
+exp=$(python - <<'PY'
+import datetime as d
+print((d.datetime.utcnow()+d.timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"))
+PY
+)
 
 vault kv put "${VAULT_KV_MOUNT}/agnetz/prod" DATABASE_URL="postgres://..." API_KEY="REPLACE_ME"
 vault kv metadata put "${VAULT_KV_MOUNT}/agnetz/prod" \
