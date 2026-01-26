@@ -1,3 +1,10 @@
+## [0.1.32](https://github.com/ID377585/Agnetz-IA/compare/v0.1.31...v0.1.32) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** fallback to GITOPS_TOKEN when app token fails ([ac248fe](https://github.com/ID377585/Agnetz-IA/commit/ac248fe216db769773a4decde30717497b378ee4))
+
 ## [0.1.31](https://github.com/ID377585/Agnetz-IA/compare/v0.1.30...v0.1.31) (2026-01-26)
 
 
