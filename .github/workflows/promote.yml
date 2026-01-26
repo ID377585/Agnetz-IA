@@ -63,6 +63,7 @@ jobs:
     env:
       GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
       GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+      GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
 
     steps:
       - name: Parse GitOps repo
@@ -78,7 +79,7 @@ jobs:
 
       - name: Create GitOps App token
         id: gitops_token
-        if: ${{ env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.GITOPS_TOKEN == '' && env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v1
         with:
           app-id: ${{ env.GITOPS_APP_ID }}
@@ -109,7 +110,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.GITOPS_REPO }}
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_token.outputs.token || env.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
           ref: ${{ secrets.GITOPS_BRANCH_PROD }}
           path: gitops
 
