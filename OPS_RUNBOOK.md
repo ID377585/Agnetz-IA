@@ -85,6 +85,9 @@ Configure:
 Workflow para configurar rotacao:
 - `.github/workflows/secrets-rotation-setup-vault.yml`
 
+Notas:
+- GitHub-hosted runners **nao** acessam `localhost`. Para Vault OSS local, use runner self-hosted ou exponha o Vault via URL publica/TLS.
+
 Bootstrap local (Vault OSS):
 - `scripts/vault_dev_start.sh`
 - `scripts/vault_bootstrap.sh`
