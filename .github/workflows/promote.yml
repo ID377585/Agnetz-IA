@@ -59,7 +59,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     needs: smoke-test-staging
-    if: ${{ needs.smoke-test-staging.result != 'failure' }}
+    if: ${{ always() && needs.smoke-test-staging.result != 'failure' }}
     env:
       GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
       GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
