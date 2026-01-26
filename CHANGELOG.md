@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/ID377585/Agnetz-IA/compare/v0.2.1...v0.3.0) (2026-01-26)
+
+
+### Features
+
+* **ops:** add vault rotation runner ([7b9ae67](https://github.com/ID377585/Agnetz-IA/commit/7b9ae6763a373d65a58a6f42afc7780fa9d379e0))
+
 ## [0.2.1](https://github.com/ID377585/Agnetz-IA/compare/v0.2.0...v0.2.1) (2026-01-26)
 
 
