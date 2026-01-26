@@ -1,5 +1,7 @@
-FROM node:18
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+FROM node:20-bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends postgresql-client \
+  && apt-get upgrade -y \
+  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --no-audit
