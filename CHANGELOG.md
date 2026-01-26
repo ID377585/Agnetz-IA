@@ -1,3 +1,10 @@
+## [0.1.23](https://github.com/ID377585/Agnetz-IA/compare/v0.1.22...v0.1.23) (2026-01-26)
+
+
+### Bug Fixes
+
+* vault bootstrap portable dates and kv check ([02c2456](https://github.com/ID377585/Agnetz-IA/commit/02c24567d28cc6e2a2a9ab79c92212111e801bf6))
+
 ## [0.1.22](https://github.com/ID377585/Agnetz-IA/compare/v0.1.21...v0.1.22) (2026-01-26)
 
 
