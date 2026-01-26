@@ -13,10 +13,9 @@ permissions:
   id-token: write
 
 env:
-  VAULT_ADDR: ${{ vars.VAULT_ADDR }}
-  VAULT_NAMESPACE: ${{ vars.VAULT_NAMESPACE }}
-  VAULT_KV_MOUNT: ${{ vars.VAULT_KV_MOUNT }}
-  SECRETS_LIST: ${{ vars.SECRETS_LIST }} # comma-separated paths relative to mount
+  VAULT_ADDR: http://127.0.0.1:8200
+  VAULT_KV_MOUNT: secret
+  SECRETS_LIST: agnetz/prod,agnetz/staging
   VAULT_ROLE: ${{ secrets.VAULT_ROLE }}
   VAULT_JWT_AUTH_PATH: ${{ secrets.VAULT_JWT_AUTH_PATH }}
 
@@ -24,12 +23,6 @@ jobs:
   setup:
     runs-on: [self-hosted, vault-local]
     steps:
-      - name: Normalize defaults
-        run: |
-          set -euo pipefail
-          : "${VAULT_KV_MOUNT:=secret}"
-          echo "VAULT_KV_MOUNT=${VAULT_KV_MOUNT}" >> "$GITHUB_ENV"
-
       - name: Auth to Vault (OIDC)
         if: ${{ env.VAULT_ROLE != '' && env.VAULT_JWT_AUTH_PATH != '' }}
         uses: hashicorp/vault-action@v3
@@ -38,7 +31,6 @@ jobs:
           method: jwt
           role: ${{ env.VAULT_ROLE }}
           path: ${{ env.VAULT_JWT_AUTH_PATH }}
-          namespace: ${{ env.VAULT_NAMESPACE }}
 
       - name: Set rotation metadata
         run: |

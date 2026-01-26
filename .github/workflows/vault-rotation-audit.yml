@@ -11,13 +11,11 @@ permissions:
   issues: write
 
 env:
-  SECRET_PROVIDER: ${{ vars.SECRET_PROVIDER }}
-  AWS_REGION: ${{ vars.AWS_REGION }}
-  GCP_PROJECT: ${{ vars.GCP_PROJECT }}
-  SECRETS_LIST: ${{ vars.SECRETS_LIST }} # comma-separated IDs or paths
-  VAULT_ADDR: ${{ vars.VAULT_ADDR }}
-  VAULT_NAMESPACE: ${{ vars.VAULT_NAMESPACE }}
-  VAULT_KV_MOUNT: ${{ vars.VAULT_KV_MOUNT }}
+  SECRET_PROVIDER: vault
+  AWS_REGION: us-east-1
+  SECRETS_LIST: agnetz/prod,agnetz/staging
+  VAULT_ADDR: http://127.0.0.1:8200
+  VAULT_KV_MOUNT: secret
 
 jobs:
   audit:
@@ -29,16 +27,6 @@ jobs:
       VAULT_ROLE: ${{ secrets.VAULT_ROLE }}
       VAULT_JWT_AUTH_PATH: ${{ secrets.VAULT_JWT_AUTH_PATH }}
     steps:
-      - name: Normalize defaults
-        run: |
-          set -euo pipefail
-          : "${SECRET_PROVIDER:=vault}"
-          : "${AWS_REGION:=us-east-1}"
-          : "${VAULT_KV_MOUNT:=secret}"
-          echo "SECRET_PROVIDER=${SECRET_PROVIDER}" >> "$GITHUB_ENV"
-          echo "AWS_REGION=${AWS_REGION}" >> "$GITHUB_ENV"
-          echo "VAULT_KV_MOUNT=${VAULT_KV_MOUNT}" >> "$GITHUB_ENV"
-
       - name: Validate inputs
         run: |
           set -euo pipefail
@@ -129,7 +117,6 @@ PY
           method: jwt
           role: ${{ env.VAULT_ROLE }}
           path: ${{ env.VAULT_JWT_AUTH_PATH }}
-          namespace: ${{ env.VAULT_NAMESPACE }}
 
       - name: Audit GCP Secret Manager rotation/expiry
         if: ${{ env.SECRET_PROVIDER == 'gcp' && env.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && env.GCP_SERVICE_ACCOUNT != '' }}
