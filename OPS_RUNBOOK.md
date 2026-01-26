@@ -71,6 +71,20 @@ Configure:
 Workflow para configurar rotacao:
 - `.github/workflows/secrets-rotation-setup-gcp.yml`
 
+## 10) Vault (rotacao + alertas)
+
+Configure:
+- `SECRET_PROVIDER=vault`
+- `VAULT_ADDR` (vars)
+- `VAULT_NAMESPACE` (vars, opcional)
+- `VAULT_KV_MOUNT` (vars, ex: secret)
+- `SECRETS_LIST` (vars, paths relativos ao mount)
+- `VAULT_ROLE` (secret)
+- `VAULT_JWT_AUTH_PATH` (secret, ex: jwt)
+
+Workflow para configurar rotacao:
+- `.github/workflows/secrets-rotation-setup-vault.yml`
+
 ## 6) Smoke test (opcional)
 
 Se quiser validar staging antes de promover:
