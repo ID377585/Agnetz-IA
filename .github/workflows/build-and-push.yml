@@ -219,6 +219,7 @@ jobs:
     env:
       GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
       GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+      GITOPS_PATH_STAGING: ${{ secrets.GITOPS_PATH_STAGING }}
 
     steps:
       - name: Parse GitOps repo
@@ -253,6 +254,12 @@ jobs:
             echo "token=${{ secrets.GITOPS_TOKEN }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Normalize GitOps paths
+        run: |
+          set -euo pipefail
+          : "${GITOPS_PATH_STAGING:=k8s/overlays/staging}"
+          echo "GITOPS_PATH_STAGING=${GITOPS_PATH_STAGING}" >> "$GITHUB_ENV"
+
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
@@ -265,7 +272,7 @@ jobs:
         id: update_manifests
         run: |
           set -eux
-          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_STAGING }}"
+          BASE_PATH="${GITOPS_PATH_STAGING}"
           IMAGE_TAG="${{ needs.build-images.outputs.image_tag }}"
 
           git -C gitops config user.email "actions@github.com"
@@ -281,15 +288,15 @@ jobs:
           )
 
           for MANIFEST in "${BACK_MANIFESTS[@]}"; do
-            if [[ -f "$MANIFEST" ]]; then
-              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.backend_digest }}|g" "$MANIFEST"
+            if [[ -f "gitops/$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.backend_digest }}|g" "gitops/$MANIFEST"
               git -C gitops add "$MANIFEST"
             fi
           done
 
           for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
-            if [[ -f "$MANIFEST" ]]; then
-              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.frontend_digest }}|g" "$MANIFEST"
+            if [[ -f "gitops/$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.frontend_digest }}|g" "gitops/$MANIFEST"
               git -C gitops add "$MANIFEST"
             fi
           done
@@ -336,6 +343,7 @@ jobs:
     env:
       GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
       GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+      GITOPS_PATH_PROD: ${{ secrets.GITOPS_PATH_PROD }}
 
     steps:
       - name: Parse GitOps repo
@@ -370,6 +378,12 @@ jobs:
             echo "token=${{ secrets.GITOPS_TOKEN }}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Normalize GitOps paths
+        run: |
+          set -euo pipefail
+          : "${GITOPS_PATH_PROD:=k8s/overlays/prod}"
+          echo "GITOPS_PATH_PROD=${GITOPS_PATH_PROD}" >> "$GITHUB_ENV"
+
       - name: Change-freeze check (prod)
         run: |
           set -eux
@@ -398,7 +412,7 @@ jobs:
         id: update_manifests
         run: |
           set -eux
-          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+          BASE_PATH="${GITOPS_PATH_PROD}"
           IMAGE_TAG="${{ needs.build-images.outputs.image_tag }}"
 
           git -C gitops config user.email "actions@github.com"
@@ -414,15 +428,15 @@ jobs:
           )
 
           for MANIFEST in "${BACK_MANIFESTS[@]}"; do
-            if [[ -f "$MANIFEST" ]]; then
-              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.backend_digest }}|g" "$MANIFEST"
+            if [[ -f "gitops/$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.backend_digest }}|g" "gitops/$MANIFEST"
               git -C gitops add "$MANIFEST"
             fi
           done
 
           for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
-            if [[ -f "$MANIFEST" ]]; then
-              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.frontend_digest }}|g" "$MANIFEST"
+            if [[ -f "gitops/$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ needs.build-images.outputs.frontend_digest }}|g" "gitops/$MANIFEST"
               git -C gitops add "$MANIFEST"
             fi
           done
