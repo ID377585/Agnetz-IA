@@ -1,3 +1,10 @@
+## [0.1.31](https://github.com/ID377585/Agnetz-IA/compare/v0.1.30...v0.1.31) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** hardcode vault defaults and make trivy non-blocking ([cd16e2d](https://github.com/ID377585/Agnetz-IA/commit/cd16e2d0648916156f20aebaadfec6b934f5199c))
+
 ## [0.1.30](https://github.com/ID377585/Agnetz-IA/compare/v0.1.29...v0.1.30) (2026-01-26)
 
 
