@@ -7,7 +7,6 @@ set -euo pipefail
 VAULT_ADDR="${VAULT_ADDR:-http://127.0.0.1:8200}"
 VAULT_KV_MOUNT="${VAULT_KV_MOUNT:-secret}"
 VAULT_GH_REPO="${VAULT_GH_REPO:-ID377585/Agnetz-IA}"
-VAULT_GITHUB_AUDIENCE="${VAULT_GITHUB_AUDIENCE:-vault}"
 ROLE_NAME="${ROLE_NAME:-agnetz-ci}"
 JWT_PATH="${JWT_PATH:-jwt}"
 
@@ -42,7 +41,7 @@ echo "Creating role ${ROLE_NAME}..."
 vault write "auth/${JWT_PATH}/role/${ROLE_NAME}" \
   role_type="jwt" \
   user_claim="repository" \
-  bound_audiences="${VAULT_GITHUB_AUDIENCE}" \
+  bound_audiences="https://github.com/${VAULT_GH_REPO%%/*}" \
   bound_subject="repo:${VAULT_GH_REPO}:ref:refs/heads/main" \
   policies="${ROLE_NAME}" \
   ttl="15m"

@@ -214,6 +214,9 @@ jobs:
     needs: build-images
     if: needs.build-images.outputs.deploy_env == 'staging'
     environment: staging
+    env:
+      GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
+      GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
 
     steps:
       - name: Parse GitOps repo
@@ -229,11 +232,11 @@ jobs:
 
       - name: Create GitOps App token
         id: gitops_token
-        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.GITOPS_APP_ID }}
-          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          app-id: ${{ env.GITOPS_APP_ID }}
+          private-key: ${{ env.GITOPS_APP_PRIVATE_KEY }}
           owner: ${{ steps.gitops_repo.outputs.owner }}
           repositories: ${{ steps.gitops_repo.outputs.repo }}
 
@@ -317,6 +320,9 @@ jobs:
     needs: build-images
     if: needs.build-images.outputs.deploy_env == 'prod'
     environment: production
+    env:
+      GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
+      GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
 
     steps:
       - name: Parse GitOps repo
@@ -332,11 +338,11 @@ jobs:
 
       - name: Create GitOps App token
         id: gitops_token
-        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v1
         with:
-          app-id: ${{ secrets.GITOPS_APP_ID }}
-          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          app-id: ${{ env.GITOPS_APP_ID }}
+          private-key: ${{ env.GITOPS_APP_PRIVATE_KEY }}
           owner: ${{ steps.gitops_repo.outputs.owner }}
           repositories: ${{ steps.gitops_repo.outputs.repo }}
 
