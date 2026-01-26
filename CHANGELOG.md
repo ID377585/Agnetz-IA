@@ -1,3 +1,10 @@
+## [0.1.30](https://github.com/ID377585/Agnetz-IA/compare/v0.1.29...v0.1.30) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** simplify workflow defaults to enable dispatch ([09cbab7](https://github.com/ID377585/Agnetz-IA/commit/09cbab7b38cdda8fc7fc2f5df9e79f1f84b6c8c9))
+
 ## [0.1.29](https://github.com/ID377585/Agnetz-IA/compare/v0.1.28...v0.1.29) (2026-01-26)
 
 
