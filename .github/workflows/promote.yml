@@ -65,6 +65,7 @@ jobs:
       GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
       GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
       GITOPS_PATH_PROD: ${{ secrets.GITOPS_PATH_PROD }}
+      GITOPS_PATH_STAGING: ${{ secrets.GITOPS_PATH_STAGING }}
 
     steps:
       - name: Parse GitOps repo
@@ -125,6 +126,30 @@ jobs:
           token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ secrets.GITOPS_BRANCH_PROD }}
           path: gitops
+
+      - name: Checkout GitOps staging (for tag consistency)
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
+          ref: ${{ secrets.GITOPS_BRANCH_STAGING }}
+          path: gitops-staging
+
+      - name: Validate tag matches staging
+        run: |
+          set -euo pipefail
+          : "${GITOPS_PATH_STAGING:=k8s/overlays/staging}"
+          TAG="${{ github.event.inputs.image_tag }}"
+          BACK_TAG=$(grep -R "image: .*${{ env.BACKEND_IMAGE }}:" "gitops-staging/${GITOPS_PATH_STAGING}/backend" | head -n1 | sed -E 's|.*image: [^:]+:([^@ ]+).*|\\1|' || true)
+          FRONT_TAG=$(grep -R "image: .*${{ env.FRONTEND_IMAGE }}:" "gitops-staging/${GITOPS_PATH_STAGING}/frontend" | head -n1 | sed -E 's|.*image: [^:]+:([^@ ]+).*|\\1|' || true)
+          if [ -z "$BACK_TAG" ] || [ -z "$FRONT_TAG" ]; then
+            echo "Could not detect staging tags in GitOps."
+            exit 1
+          fi
+          if [ "$BACK_TAG" != "$TAG" ] || [ "$FRONT_TAG" != "$TAG" ]; then
+            echo "Staging tag mismatch. Expected $TAG, got backend=$BACK_TAG frontend=$FRONT_TAG."
+            exit 1
+          fi
 
       - name: Update manifests (prod)
         id: update_manifests

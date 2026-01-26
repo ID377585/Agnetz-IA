@@ -193,5 +193,6 @@ jobs:
         continue-on-error: true
         with:
           token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
+          repository: ${{ secrets.GITOPS_REPO }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
