@@ -48,6 +48,11 @@ Habilite no GitHub:
 - Configure OIDC no GitHub e no provedor (AWS/Vault/GCP).
 - Use OIDC para obter credenciais temporárias no CI.
 
+## 7) Politicas de secrets (rotacao e break-glass)
+
+- Rotacao e alertas: `gitops/k8s/secrets/ROTATION_POLICY.md`
+- Break-glass: `gitops/k8s/secrets/BREAK_GLASS.md`
+
 ## 6) Smoke test (opcional)
 
 Se quiser validar staging antes de promover:
