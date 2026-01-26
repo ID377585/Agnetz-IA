@@ -330,6 +330,7 @@ jobs:
       - name: Enable auto-merge for the PR (if created)
         if: steps.update_manifests.outputs.pr_created == 'true'
         uses: peter-evans/enable-pull-request-automerge@v2
+        continue-on-error: true
         with:
           token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
@@ -470,6 +471,7 @@ jobs:
       - name: Enable auto-merge for the PR (if created)
         if: steps.update_manifests.outputs.pr_created == 'true'
         uses: peter-evans/enable-pull-request-automerge@v2
+        continue-on-error: true
         with:
           token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
