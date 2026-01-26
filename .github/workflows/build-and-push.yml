@@ -126,7 +126,6 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.BACKEND_TAGS }}
-          outputs: type=digest
 
       - name: Resolve backend digest (fallback to imagetools if needed)
         id: backend_digest
@@ -170,7 +169,6 @@ jobs:
           push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ env.FRONTEND_TAGS }}
-          outputs: type=digest
 
       - name: Resolve frontend digest (fallback)
         id: frontend_digest
