@@ -1,3 +1,10 @@
+## [0.1.18](https://github.com/ID377585/Agnetz-IA/compare/v0.1.17...v0.1.18) (2026-01-26)
+
+
+### Bug Fixes
+
+* prefer GITOPS_TOKEN in promote workflow ([d5e6b52](https://github.com/ID377585/Agnetz-IA/commit/d5e6b52c55587f9534db9b57464dc089c36a7c99))
+
 ## [0.1.17](https://github.com/ID377585/Agnetz-IA/compare/v0.1.16...v0.1.17) (2026-01-26)
 
 
