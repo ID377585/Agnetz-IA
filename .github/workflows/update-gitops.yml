@@ -106,12 +106,10 @@ jobs:
           # This simple sed replaces image lines like: image: ghcr.io/...@sha256:...
           # You can use yq for structured edits.
           find . -type f -name '*.yaml' -o -name '*.yml' | while read -r f; do
-            if grep -q "image: .*@" "$f"; then
-              sed -E -i.bak "s|image: .*@sha256:[a-f0-9]{64}|image: ${IMAGE}@${DIGEST}|g" "$f" || true
-            else
-              # try replacing tag style image: repo:tag  -> do nothing here or adapt
-              :
-            fi
+            # Replace digest form: image: repo@sha256:...
+            sed -E -i.bak "s|image: ${IMAGE}@sha256:[a-f0-9]{64}|image: ${IMAGE}@${DIGEST}|g" "$f" || true
+            # Replace tag form: image: repo:tag (no digest)
+            sed -E -i.bak "s|image: ${IMAGE}:[^[:space:]]+|image: ${IMAGE}@${DIGEST}|g" "$f" || true
           done
 
           # Remove backups created by sed on macOS
