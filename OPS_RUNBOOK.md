@@ -59,6 +59,18 @@ Habilite no GitHub:
 - Variaveis: `SECRET_PROVIDER`, `SECRETS_LIST`, `AWS_REGION`
 - Secret: `AWS_ROLE_ARN` (OIDC)
 
+## 9) GCP Secret Manager (rotacao + alertas)
+
+Configure:
+- `SECRET_PROVIDER=gcp`
+- `GCP_PROJECT` (vars)
+- `SECRETS_LIST` (vars, ids separados por virgula)
+- `GCP_WORKLOAD_IDENTITY_PROVIDER` (secret)
+- `GCP_SERVICE_ACCOUNT` (secret)
+
+Workflow para configurar rotacao:
+- `.github/workflows/secrets-rotation-setup-gcp.yml`
+
 ## 6) Smoke test (opcional)
 
 Se quiser validar staging antes de promover:
