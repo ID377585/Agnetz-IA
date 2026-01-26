@@ -1,3 +1,10 @@
+## [0.1.20](https://github.com/ID377585/Agnetz-IA/compare/v0.1.19...v0.1.20) (2026-01-26)
+
+
+### Bug Fixes
+
+* promote uses gitops paths and token ([965c3c9](https://github.com/ID377585/Agnetz-IA/commit/965c3c9a7096b7a99afde54d5ddf6057001c4834))
+
 ## [0.1.19](https://github.com/ID377585/Agnetz-IA/compare/v0.1.18...v0.1.19) (2026-01-26)
 
 
