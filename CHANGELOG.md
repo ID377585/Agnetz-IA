@@ -1,3 +1,10 @@
+## [0.1.34](https://github.com/ID377585/Agnetz-IA/compare/v0.1.33...v0.1.34) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** ignore auto-merge failure ([dc9b255](https://github.com/ID377585/Agnetz-IA/commit/dc9b255824429848ce93b5e29d288d7edc760ea5))
+
 ## [0.1.33](https://github.com/ID377585/Agnetz-IA/compare/v0.1.32...v0.1.33) (2026-01-26)
 
 
