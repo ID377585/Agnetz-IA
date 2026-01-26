@@ -47,12 +47,12 @@ vault write "auth/${JWT_PATH}/role/${ROLE_NAME}" \
   ttl="15m"
 
 echo "Seeding example secrets metadata..."
-now=$(python - <<'PY'
+now=$(python3 - <<'PY'
 import datetime as d
 print(d.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ"))
 PY
 )
-exp=$(python - <<'PY'
+exp=$(python3 - <<'PY'
 import datetime as d
 print((d.datetime.utcnow()+d.timedelta(days=90)).strftime("%Y-%m-%dT%H:%M:%SZ"))
 PY
