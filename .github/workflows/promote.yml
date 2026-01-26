@@ -118,7 +118,7 @@ jobs:
         id: update_manifests
         run: |
           set -eux
-          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+          BASE_PATH="${{ secrets.GITOPS_PATH_PROD }}"
           IMAGE_TAG="${{ github.event.inputs.image_tag }}"
 
           git -C gitops config user.email "actions@github.com"
