@@ -85,6 +85,10 @@ Configure:
 Workflow para configurar rotacao:
 - `.github/workflows/secrets-rotation-setup-vault.yml`
 
+Bootstrap local (Vault OSS):
+- `scripts/vault_dev_start.sh`
+- `scripts/vault_bootstrap.sh`
+
 ## 6) Smoke test (opcional)
 
 Se quiser validar staging antes de promover:
