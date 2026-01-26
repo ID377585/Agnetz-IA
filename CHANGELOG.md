@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/ID377585/Agnetz-IA/compare/v0.2.0...v0.2.1) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** enforce staging tag match and correct automerge repo ([66d4a7e](https://github.com/ID377585/Agnetz-IA/commit/66d4a7ed1b78293a8fd52118ea1001d738a438b4))
+
 # [0.2.0](https://github.com/ID377585/Agnetz-IA/compare/v0.1.34...v0.2.0) (2026-01-26)
 
 
