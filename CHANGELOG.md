@@ -1,3 +1,10 @@
+## [0.1.14](https://github.com/ID377585/Agnetz-IA/compare/v0.1.13...v0.1.14) (2026-01-26)
+
+
+### Bug Fixes
+
+* update gitops images when tag-only manifests ([4046605](https://github.com/ID377585/Agnetz-IA/commit/40466053dcfa272c11646c88b83baf2ab868e4d3))
+
 ## [0.1.13](https://github.com/ID377585/Agnetz-IA/compare/v0.1.12...v0.1.13) (2026-01-25)
 
 
