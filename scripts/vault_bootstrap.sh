@@ -59,15 +59,17 @@ PY
 )
 
 vault kv put "${VAULT_KV_MOUNT}/agnetz/prod" DATABASE_URL="postgres://..." API_KEY="REPLACE_ME"
-vault kv metadata put "${VAULT_KV_MOUNT}/agnetz/prod" \
+vault kv metadata put \
   -custom-metadata=rotation_days="90" \
   -custom-metadata=last_rotated="${now}" \
-  -custom-metadata=expires_at="${exp}"
+  -custom-metadata=expires_at="${exp}" \
+  "${VAULT_KV_MOUNT}/agnetz/prod"
 
 vault kv put "${VAULT_KV_MOUNT}/agnetz/staging" DATABASE_URL="postgres://..." API_KEY="REPLACE_ME"
-vault kv metadata put "${VAULT_KV_MOUNT}/agnetz/staging" \
+vault kv metadata put \
   -custom-metadata=rotation_days="90" \
   -custom-metadata=last_rotated="${now}" \
-  -custom-metadata=expires_at="${exp}"
+  -custom-metadata=expires_at="${exp}" \
+  "${VAULT_KV_MOUNT}/agnetz/staging"
 
 echo "Bootstrap complete."
