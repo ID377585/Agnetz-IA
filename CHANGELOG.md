@@ -1,3 +1,10 @@
+## [0.1.33](https://github.com/ID377585/Agnetz-IA/compare/v0.1.32...v0.1.33) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** correct gitops path handling ([4e48fec](https://github.com/ID377585/Agnetz-IA/commit/4e48fec65f32e6f5b2f5389db75d37e9975e05a1))
+
 ## [0.1.32](https://github.com/ID377585/Agnetz-IA/compare/v0.1.31...v0.1.32) (2026-01-26)
 
 
