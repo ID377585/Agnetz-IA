@@ -1,0 +1,44 @@
+name: Vault Rotation Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      rotation_days:
+        description: "Rotation period in days (metadata only)"
+        required: false
+        default: "90"
+  schedule:
+    - cron: "30 6 * * *" # daily after audit window
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch rotation setup
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "vault-rotation-setup.yml",
+              ref: "main",
+              inputs: {
+                rotation_days: "${{ github.event.inputs.rotation_days || '90' }}"
+              }
+            });
+
+      - name: Dispatch rotation audit
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: "vault-rotation-audit.yml",
+              ref: "main"
+            });
