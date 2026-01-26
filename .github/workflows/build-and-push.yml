@@ -236,17 +236,28 @@ jobs:
         id: gitops_token
         if: ${{ env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v1
+        continue-on-error: true
         with:
           app-id: ${{ env.GITOPS_APP_ID }}
           private-key: ${{ env.GITOPS_APP_PRIVATE_KEY }}
           owner: ${{ steps.gitops_repo.outputs.owner }}
           repositories: ${{ steps.gitops_repo.outputs.repo }}
 
+      - name: Select GitOps auth token
+        id: gitops_auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ steps.gitops_token.outputs.token }}" ]; then
+            echo "token=${{ steps.gitops_token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "token=${{ secrets.GITOPS_TOKEN }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout GitOps repo
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.GITOPS_REPO }}
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ secrets.GITOPS_BRANCH_STAGING }}
           path: gitops
 
@@ -297,7 +308,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           path: gitops
           base: ${{ secrets.GITOPS_BRANCH_STAGING }}
           branch: ${{ steps.update_manifests.outputs.gitops_branch }}
@@ -313,7 +324,7 @@ jobs:
         if: steps.update_manifests.outputs.pr_created == 'true'
         uses: peter-evans/enable-pull-request-automerge@v2
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
 
@@ -342,11 +353,22 @@ jobs:
         id: gitops_token
         if: ${{ env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v1
+        continue-on-error: true
         with:
           app-id: ${{ env.GITOPS_APP_ID }}
           private-key: ${{ env.GITOPS_APP_PRIVATE_KEY }}
           owner: ${{ steps.gitops_repo.outputs.owner }}
           repositories: ${{ steps.gitops_repo.outputs.repo }}
+
+      - name: Select GitOps auth token
+        id: gitops_auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ steps.gitops_token.outputs.token }}" ]; then
+            echo "token=${{ steps.gitops_token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "token=${{ secrets.GITOPS_TOKEN }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Change-freeze check (prod)
         run: |
@@ -368,7 +390,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.GITOPS_REPO }}
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ secrets.GITOPS_BRANCH_PROD }}
           path: gitops
 
@@ -419,7 +441,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           path: gitops
           base: ${{ secrets.GITOPS_BRANCH_PROD }}
           branch: ${{ steps.update_manifests.outputs.gitops_branch }}
@@ -435,6 +457,6 @@ jobs:
         if: steps.update_manifests.outputs.pr_created == 'true'
         uses: peter-evans/enable-pull-request-automerge@v2
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
