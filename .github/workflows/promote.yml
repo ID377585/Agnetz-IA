@@ -118,7 +118,7 @@ jobs:
         id: update_manifests
         run: |
           set -eux
-          BASE_PATH="${{ secrets.GITOPS_PATH_PROD }}"
+          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
           IMAGE_TAG="${{ github.event.inputs.image_tag }}"
 
           git -C gitops config user.email "actions@github.com"
@@ -161,7 +161,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_token.outputs.token || env.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
           path: gitops
           base: ${{ secrets.GITOPS_BRANCH_PROD }}
           branch: ${{ steps.update_manifests.outputs.gitops_branch }}
@@ -177,6 +177,6 @@ jobs:
         if: steps.update_manifests.outputs.pr_created == 'true'
         uses: peter-evans/enable-pull-request-automerge@v2
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_token.outputs.token || env.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash
