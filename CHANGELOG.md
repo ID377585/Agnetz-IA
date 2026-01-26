@@ -1,3 +1,10 @@
+## [0.1.19](https://github.com/ID377585/Agnetz-IA/compare/v0.1.18...v0.1.19) (2026-01-26)
+
+
+### Bug Fixes
+
+* use gitops-relative paths in promote ([9bdde3e](https://github.com/ID377585/Agnetz-IA/commit/9bdde3e00b408df21329e3684077d706bec8683c))
+
 ## [0.1.18](https://github.com/ID377585/Agnetz-IA/compare/v0.1.17...v0.1.18) (2026-01-26)
 
 
