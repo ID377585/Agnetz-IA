@@ -1,3 +1,10 @@
+## [0.1.25](https://github.com/ID377585/Agnetz-IA/compare/v0.1.24...v0.1.25) (2026-01-26)
+
+
+### Bug Fixes
+
+* vault metadata flag order ([a003701](https://github.com/ID377585/Agnetz-IA/commit/a003701c3ae94e69d3f2a627fd2923b36b4ca93a))
+
 ## [0.1.24](https://github.com/ID377585/Agnetz-IA/compare/v0.1.23...v0.1.24) (2026-01-26)
 
 
