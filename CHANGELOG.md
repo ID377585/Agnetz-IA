@@ -1,3 +1,10 @@
+## [0.1.24](https://github.com/ID377585/Agnetz-IA/compare/v0.1.23...v0.1.24) (2026-01-26)
+
+
+### Bug Fixes
+
+* use python3 in vault bootstrap ([2d0b046](https://github.com/ID377585/Agnetz-IA/commit/2d0b046753f470418b03705e51da022b17e08564))
+
 ## [0.1.23](https://github.com/ID377585/Agnetz-IA/compare/v0.1.22...v0.1.23) (2026-01-26)
 
 
