@@ -1,3 +1,10 @@
+## [0.1.16](https://github.com/ID377585/Agnetz-IA/compare/v0.1.15...v0.1.16) (2026-01-26)
+
+
+### Bug Fixes
+
+* avoid secrets context in promote workflow ([b12d022](https://github.com/ID377585/Agnetz-IA/commit/b12d022990141b719abf5a56dd15c355f3d1dfbf))
+
 ## [0.1.15](https://github.com/ID377585/Agnetz-IA/compare/v0.1.14...v0.1.15) (2026-01-26)
 
 
