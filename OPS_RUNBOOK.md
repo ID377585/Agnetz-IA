@@ -42,6 +42,8 @@ Habilite no GitHub:
 - `GITOPS_BRANCH_PROD`: `main`
 - `GITOPS_PATH_STAGING`: `k8s/overlays/staging`
 - `GITOPS_PATH_PROD`: `k8s/overlays/prod`
+- (Opcional) `CHANGE_FREEZE_WINDOWS`: janelas de freeze, ex: `2026-12-20..2027-01-05,2027-07-01..2027-07-07`
+- (Recomendado) **Remover** GitHub App (GITOPS_APP_ID/GITOPS_APP_PRIVATE_KEY) e usar somente `GITOPS_TOKEN`
 
 ## 5) Secrets / OIDC (sem long-lived)
 
@@ -52,10 +54,11 @@ Habilite no GitHub:
 
 - Rotacao e alertas: `gitops/k8s/secrets/ROTATION_POLICY.md`
 - Break-glass: `gitops/k8s/secrets/BREAK_GLASS.md`
+- Workflow de auditoria: `.github/workflows/break-glass-log.yml`
 
 ## 8) Audit de rotacao (CI)
 
-- Workflow: `.github/workflows/secrets-rotation-audit.yml`
+- Workflow: `.github/workflows/vault-rotation-audit.yml`
 - Variaveis: `SECRET_PROVIDER`, `SECRETS_LIST`, `AWS_REGION`
 - Secret: `AWS_ROLE_ARN` (OIDC)
 
@@ -83,7 +86,7 @@ Configure:
 - `VAULT_JWT_AUTH_PATH` (secret, ex: jwt)
 
 Workflow para configurar rotacao:
-- `.github/workflows/secrets-rotation-setup-vault.yml`
+- `.github/workflows/vault-rotation-setup.yml`
 
 Notas:
 - GitHub-hosted runners **nao** acessam `localhost`. Para Vault OSS local, use runner self-hosted ou exponha o Vault via URL publica/TLS.

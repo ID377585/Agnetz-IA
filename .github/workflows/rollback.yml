@@ -27,6 +27,12 @@ jobs:
   rollback:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.deploy_env }}
+    env:
+      GITOPS_APP_ID: ${{ secrets.GITOPS_APP_ID }}
+      GITOPS_APP_PRIVATE_KEY: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+      GITOPS_TOKEN: ${{ secrets.GITOPS_TOKEN }}
+      GITOPS_PATH_STAGING: ${{ secrets.GITOPS_PATH_STAGING }}
+      GITOPS_PATH_PROD: ${{ secrets.GITOPS_PATH_PROD }}
 
     steps:
       - name: Parse GitOps repo
@@ -42,13 +48,24 @@ jobs:
 
       - name: Create GitOps App token
         id: gitops_token
-        if: ${{ secrets.GITOPS_APP_ID != '' && secrets.GITOPS_APP_PRIVATE_KEY != '' }}
+        if: ${{ env.GITOPS_TOKEN == '' && env.GITOPS_APP_ID != '' && env.GITOPS_APP_PRIVATE_KEY != '' }}
         uses: actions/create-github-app-token@v1
+        continue-on-error: true
         with:
-          app-id: ${{ secrets.GITOPS_APP_ID }}
-          private-key: ${{ secrets.GITOPS_APP_PRIVATE_KEY }}
+          app-id: ${{ env.GITOPS_APP_ID }}
+          private-key: ${{ env.GITOPS_APP_PRIVATE_KEY }}
           owner: ${{ steps.gitops_repo.outputs.owner }}
           repositories: ${{ steps.gitops_repo.outputs.repo }}
+
+      - name: Select GitOps auth token
+        id: gitops_auth
+        run: |
+          set -euo pipefail
+          if [ -n "${{ steps.gitops_token.outputs.token }}" ]; then
+            echo "token=${{ steps.gitops_token.outputs.token }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "token=${{ env.GITOPS_TOKEN }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Resolve rollback tag
         id: tag
@@ -97,7 +114,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ${{ secrets.GITOPS_REPO }}
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           ref: ${{ github.event.inputs.deploy_env == 'prod' && secrets.GITOPS_BRANCH_PROD || secrets.GITOPS_BRANCH_STAGING }}
           path: gitops
 
@@ -106,10 +123,12 @@ jobs:
         run: |
           set -eux
           if [[ "${{ github.event.inputs.deploy_env }}" == "prod" ]]; then
-            BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+            : "${GITOPS_PATH_PROD:=k8s/overlays/prod}"
+            BASE_PATH="${GITOPS_PATH_PROD}"
             BASE_BRANCH="${{ secrets.GITOPS_BRANCH_PROD }}"
           else
-            BASE_PATH="gitops/${{ secrets.GITOPS_PATH_STAGING }}"
+            : "${GITOPS_PATH_STAGING:=k8s/overlays/staging}"
+            BASE_PATH="${GITOPS_PATH_STAGING}"
             BASE_BRANCH="${{ secrets.GITOPS_BRANCH_STAGING }}"
           fi
 
@@ -128,15 +147,15 @@ jobs:
           )
 
           for MANIFEST in "${BACK_MANIFESTS[@]}"; do
-            if [[ -f "$MANIFEST" ]]; then
-              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.backend_digest }}|g" "$MANIFEST"
+            if [[ -f "gitops/$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.backend_digest }}|g" "gitops/$MANIFEST"
               git -C gitops add "$MANIFEST"
             fi
           done
 
           for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
-            if [[ -f "$MANIFEST" ]]; then
-              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.frontend_digest }}|g" "$MANIFEST"
+            if [[ -f "gitops/$MANIFEST" ]]; then
+              sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.frontend_digest }}|g" "gitops/$MANIFEST"
               git -C gitops add "$MANIFEST"
             fi
           done
@@ -156,7 +175,7 @@ jobs:
         id: create_pr
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           path: gitops
           base: ${{ steps.update_manifests.outputs.gitops_base }}
           branch: ${{ steps.update_manifests.outputs.gitops_branch }}
@@ -171,7 +190,8 @@ jobs:
       - name: Enable auto-merge for the PR (if created)
         if: steps.update_manifests.outputs.pr_created == 'true'
         uses: peter-evans/enable-pull-request-automerge@v2
+        continue-on-error: true
         with:
-          token: ${{ steps.gitops_token.outputs.token || secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.gitops_auth.outputs.token || secrets.GITHUB_TOKEN }}
           pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
           merge-method: squash

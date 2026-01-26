@@ -1,0 +1,84 @@
+name: Break-glass Audit Log
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (staging/prod)"
+        required: true
+        default: "prod"
+      reason:
+        description: "Why break-glass was used"
+        required: true
+      ticket:
+        description: "Incident/Change ticket (optional)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  log:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout GitOps repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.GITOPS_REPO }}
+          token: ${{ secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          ref: ${{ secrets.GITOPS_BRANCH_PROD }}
+          path: gitops
+
+      - name: Append audit entry
+        id: append
+        run: |
+          set -euo pipefail
+          LOG="gitops/k8s/audit/break-glass.log"
+          mkdir -p "$(dirname "$LOG")"
+          TS=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          ENV="${{ github.event.inputs.environment }}"
+          REASON="${{ github.event.inputs.reason }}"
+          TICKET="${{ github.event.inputs.ticket }}"
+          ACTOR="${{ github.actor }}"
+          RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          printf "%s env=%s actor=%s ticket=%s reason=%s run=%s\n" "$TS" "$ENV" "$ACTOR" "$TICKET" "$REASON" "$RUN_URL" >> "$LOG"
+
+          git -C gitops config user.email "actions@github.com"
+          git -C gitops config user.name "github-actions"
+          git -C gitops add k8s/audit/break-glass.log
+
+          if git -C gitops diff --staged --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Create PR in GitOps repo
+        if: steps.append.outputs.changed == 'true'
+        id: create_pr
+        uses: peter-evans/create-pull-request@v5
+        with:
+          token: ${{ secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          path: gitops
+          base: ${{ secrets.GITOPS_BRANCH_PROD }}
+          branch: break-glass/${{ github.run_id }}
+          title: "audit: break-glass ${{ github.event.inputs.environment }}"
+          body: |
+            Break-glass audit entry.
+            Environment: ${{ github.event.inputs.environment }}
+            Actor: ${{ github.actor }}
+            Ticket: ${{ github.event.inputs.ticket }}
+            Reason: ${{ github.event.inputs.reason }}
+          labels: break-glass,audit
+
+      - name: Enable auto-merge (if created)
+        if: steps.append.outputs.changed == 'true'
+        uses: peter-evans/enable-pull-request-automerge@v2
+        continue-on-error: true
+        with:
+          token: ${{ secrets.GITOPS_TOKEN || secrets.GITHUB_TOKEN }}
+          repository: ${{ secrets.GITOPS_REPO }}
+          pull-request-number: ${{ steps.create_pr.outputs.pull-request-number }}
+          merge-method: squash

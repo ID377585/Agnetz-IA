@@ -253,3 +253,25 @@ PY
         if: ${{ (env.SECRET_PROVIDER == 'aws' && env.AWS_ROLE_ARN == '') || (env.SECRET_PROVIDER == 'gcp' && (env.GCP_WORKLOAD_IDENTITY_PROVIDER == '' || env.GCP_SERVICE_ACCOUNT == '')) || (env.SECRET_PROVIDER == 'vault' && (env.VAULT_ROLE == '' || env.VAULT_JWT_AUTH_PATH == '')) || (env.SECRET_PROVIDER != 'aws' && env.SECRET_PROVIDER != 'gcp' && env.SECRET_PROVIDER != 'vault') }}
         run: |
           echo "Provider not configured. Set SECRET_PROVIDER and provider credentials to enable audit."
+
+      - name: Create alert issue on failure
+        if: ${{ failure() }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `Secrets rotation audit failed - ${new Date().toISOString().slice(0,10)}`;
+            const body = [
+              `Run: ${runUrl}`,
+              `Actor: ${context.actor}`,
+              `Ref: ${context.ref}`,
+              '',
+              'Please review rotation metadata and fix any expired/overdue secrets.'
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              body,
+              labels: ['alert', 'secrets']
+            });
