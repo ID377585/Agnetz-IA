@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/ID377585/Agnetz-IA/compare/v0.1.34...v0.2.0) (2026-01-26)
+
+
+### Features
+
+* **ops:** harden promote/rollback and add break-glass audit ([c0eb763](https://github.com/ID377585/Agnetz-IA/commit/c0eb7633edbd722d20289eea239fa94acffefbf6))
+
 ## [0.1.34](https://github.com/ID377585/Agnetz-IA/compare/v0.1.33...v0.1.34) (2026-01-26)
 
 
