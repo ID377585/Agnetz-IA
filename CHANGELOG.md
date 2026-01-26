@@ -1,3 +1,10 @@
+## [0.1.22](https://github.com/ID377585/Agnetz-IA/compare/v0.1.21...v0.1.22) (2026-01-26)
+
+
+### Bug Fixes
+
+* enable auto-merge on gitops repo ([225ef11](https://github.com/ID377585/Agnetz-IA/commit/225ef1174cbe0334cd200a90637e25ae46756cf5))
+
 ## [0.1.21](https://github.com/ID377585/Agnetz-IA/compare/v0.1.20...v0.1.21) (2026-01-26)
 
 
