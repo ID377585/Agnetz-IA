@@ -118,11 +118,12 @@ jobs:
         id: update_manifests
         run: |
           set -eux
-          BASE_PATH="gitops/${{ secrets.GITOPS_PATH_PROD }}"
+          cd gitops
+          BASE_PATH="${{ secrets.GITOPS_PATH_PROD }}"
           IMAGE_TAG="${{ github.event.inputs.image_tag }}"
 
-          git -C gitops config user.email "actions@github.com"
-          git -C gitops config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git config user.name "github-actions"
 
           BACK_MANIFESTS=(
             "${BASE_PATH}/backend/rollout.yaml"
@@ -136,19 +137,19 @@ jobs:
           for MANIFEST in "${BACK_MANIFESTS[@]}"; do
             if [[ -f "$MANIFEST" ]]; then
               sed -E -i "s|image: .*|image: ${{ env.BACKEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.backend_digest }}|g" "$MANIFEST"
-              git -C gitops add "$MANIFEST"
+              git add "$MANIFEST"
             fi
           done
 
           for MANIFEST in "${FRONT_MANIFESTS[@]}"; do
             if [[ -f "$MANIFEST" ]]; then
               sed -E -i "s|image: .*|image: ${{ env.FRONTEND_IMAGE }}:${IMAGE_TAG}@${{ steps.digests.outputs.frontend_digest }}|g" "$MANIFEST"
-              git -C gitops add "$MANIFEST"
+              git add "$MANIFEST"
             fi
           done
 
           BRANCH="promote/${IMAGE_TAG}-${{ github.run_id }}"
-          if git -C gitops diff --staged --quiet; then
+          if git diff --staged --quiet; then
             echo "No changes to commit"
             echo "pr_created=false" >> $GITHUB_OUTPUT
             exit 0
