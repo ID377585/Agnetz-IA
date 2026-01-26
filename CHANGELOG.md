@@ -1,3 +1,11 @@
+## [0.1.29](https://github.com/ID377585/Agnetz-IA/compare/v0.1.28...v0.1.29) (2026-01-26)
+
+
+### Bug Fixes
+
+* **ci:** avoid secrets in audit conditions ([2902ba8](https://github.com/ID377585/Agnetz-IA/commit/2902ba8d8e882d9be65f3a84eb36363d342e322a))
+* **ci:** make vault dates portable and buildx digest compatible ([8e8effe](https://github.com/ID377585/Agnetz-IA/commit/8e8effe18aa428c5edc7dcd3b44eff55364eeb35))
+
 ## [0.1.28](https://github.com/ID377585/Agnetz-IA/compare/v0.1.27...v0.1.28) (2026-01-26)
 
 
