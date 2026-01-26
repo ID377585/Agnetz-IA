@@ -1,3 +1,10 @@
+## [0.1.21](https://github.com/ID377585/Agnetz-IA/compare/v0.1.20...v0.1.21) (2026-01-26)
+
+
+### Bug Fixes
+
+* update prod manifests relative to gitops repo ([f1fdc38](https://github.com/ID377585/Agnetz-IA/commit/f1fdc38103cc7ce894b9d7eb3c26e25fe1471747))
+
 ## [0.1.20](https://github.com/ID377585/Agnetz-IA/compare/v0.1.19...v0.1.20) (2026-01-26)
 
 
