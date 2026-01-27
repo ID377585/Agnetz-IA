@@ -1,0 +1,13 @@
+id: saas
+title: SaaS Checklist
+items:
+  - id: billing
+    text: "Billing flow defined"
+  - id: onboarding
+    text: "Onboarding checklist and default org/user"
+  - id: audit
+    text: "Audit logging for sensitive actions"
+  - id: backup
+    text: "Backup + restore procedure"
+  - id: privacy
+    text: "Privacy policy and data retention"

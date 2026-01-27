@@ -1,0 +1,13 @@
+id: automation
+title: Automation Checklist
+items:
+  - id: idempotent
+    text: "Idempotent execution"
+  - id: retries
+    text: "Retry policy defined"
+  - id: observability
+    text: "Logs + tracing on key steps"
+  - id: notifications
+    text: "Failure notifications configured"
+  - id: rollback
+    text: "Rollback/undo path documented"

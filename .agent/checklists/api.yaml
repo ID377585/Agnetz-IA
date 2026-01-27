@@ -1,0 +1,15 @@
+id: api
+title: API Service Checklist
+items:
+  - id: api-versioning
+    text: "Endpoints versioned (/v1)"
+  - id: health-endpoint
+    text: "Health endpoint exists"
+  - id: authz
+    text: "Authn/Authz defined"
+  - id: rate-limit
+    text: "Rate limiting or abuse protection"
+  - id: logging
+    text: "Structured logs in JSON"
+  - id: metrics
+    text: "Basic metrics exposed"

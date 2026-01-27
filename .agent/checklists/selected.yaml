@@ -1,0 +1,8 @@
+template: "api"
+completed:
+  - api-versioning
+  - health-endpoint
+  - authz
+  - rate-limit
+  - logging
+  - metrics
