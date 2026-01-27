@@ -1,3 +1,10 @@
+## [0.8.1](https://github.com/ID377585/Agnetz-IA/compare/v0.8.0...v0.8.1) (2026-01-27)
+
+
+### Bug Fixes
+
+* **policy:** resolve checklist path in CI ([ce6a8ab](https://github.com/ID377585/Agnetz-IA/commit/ce6a8aba30d9226990c956b8a911a4ebc91e6c94))
+
 # [0.8.0](https://github.com/ID377585/Agnetz-IA/compare/v0.7.0...v0.8.0) (2026-01-27)
 
 
