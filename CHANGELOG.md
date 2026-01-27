@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/ID377585/Agnetz-IA/compare/v0.4.0...v0.5.0) (2026-01-27)
+
+
+### Features
+
+* **agent:** add editorconfig, prettier, and accepted decisions ([0a680b3](https://github.com/ID377585/Agnetz-IA/commit/0a680b30f45c3c24ba38771a99e8437a799e789d))
+
 # [0.4.0](https://github.com/ID377585/Agnetz-IA/compare/v0.3.0...v0.4.0) (2026-01-27)
 
 
