@@ -9,10 +9,11 @@ if [ ! -f "$SELECTED" ]; then
   exit 1
 fi
 
+export ROOT_DIR
 python3 - <<'PY'
-import sys, pathlib, yaml
+import os, sys, pathlib, yaml
 
-root = pathlib.Path(__file__).resolve().parents[1]
+root = pathlib.Path(os.environ["ROOT_DIR"]).resolve()
 selected = root / ".agent/checklists/selected.yaml"
 data = yaml.safe_load(selected.read_text())
 template = data.get("template")
