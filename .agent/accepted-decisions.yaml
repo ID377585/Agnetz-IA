@@ -1,0 +1,12 @@
+version: 1
+
+# Approved decisions that become defaults over time.
+accepted:
+  - date: "2026-01-26"
+    decision: "Use Prisma for DB access"
+  - date: "2026-01-26"
+    decision: "Use Zod for validation"
+  - date: "2026-01-26"
+    decision: "Use ArgoCD + External Secrets + Vault"
+  - date: "2026-01-26"
+    decision: "Use semantic-release with rc tags on staging"
