@@ -124,7 +124,7 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ env.BACKEND_TAGS }}
 
       - name: Resolve backend digest (fallback to imagetools if needed)
@@ -169,7 +169,7 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           tags: ${{ env.FRONTEND_TAGS }}
 
       - name: Resolve frontend digest (fallback)
