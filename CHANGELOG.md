@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/ID377585/Agnetz-IA/compare/v0.3.0...v0.4.0) (2026-01-27)
+
+
+### Features
+
+* **agent:** add dev preference memory ([1879e90](https://github.com/ID377585/Agnetz-IA/commit/1879e90b17e17884629112e6564887d842141a0a))
+
 # [0.3.0](https://github.com/ID377585/Agnetz-IA/compare/v0.2.1...v0.3.0) (2026-01-26)
 
 
