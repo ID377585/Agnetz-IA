@@ -1,3 +1,10 @@
+## [0.6.1](https://github.com/ID377585/Agnetz-IA/compare/v0.6.0...v0.6.1) (2026-01-27)
+
+
+### Bug Fixes
+
+* **ci:** harden vault runner and speed up builds ([ac9250e](https://github.com/ID377585/Agnetz-IA/commit/ac9250ef6cfad6e2e7e8c5516ec0efb4f1db684a))
+
 # [0.6.0](https://github.com/ID377585/Agnetz-IA/compare/v0.5.0...v0.6.0) (2026-01-27)
 
 
