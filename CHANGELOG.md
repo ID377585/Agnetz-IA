@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/ID377585/Agnetz-IA/compare/v0.5.0...v0.6.0) (2026-01-27)
+
+
+### Features
+
+* **agent:** add biome config and accept decision script ([4155217](https://github.com/ID377585/Agnetz-IA/commit/415521719724b08c023939c845229d8cb0f44003))
+
 # [0.5.0](https://github.com/ID377585/Agnetz-IA/compare/v0.4.0...v0.5.0) (2026-01-27)
 
 
