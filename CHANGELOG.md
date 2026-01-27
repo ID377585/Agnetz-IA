@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/ID377585/Agnetz-IA/compare/v0.7.0...v0.8.0) (2026-01-27)
+
+
+### Features
+
+* **policy:** add checklists and conftest gate ([96767d2](https://github.com/ID377585/Agnetz-IA/commit/96767d218d553b6660321f8566958e2033448d3f))
+
 # [0.7.0](https://github.com/ID377585/Agnetz-IA/compare/v0.6.1...v0.7.0) (2026-01-27)
 
 
