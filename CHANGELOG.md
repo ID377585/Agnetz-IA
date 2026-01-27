@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/ID377585/Agnetz-IA/compare/v0.6.1...v0.7.0) (2026-01-27)
+
+
+### Features
+
+* **agent:** resolve preferences into a single snapshot ([2ecb0bd](https://github.com/ID377585/Agnetz-IA/commit/2ecb0bd6fac59ce44c51f9a5430eff640206d63b))
+
 ## [0.6.1](https://github.com/ID377585/Agnetz-IA/compare/v0.6.0...v0.6.1) (2026-01-27)
 
 
