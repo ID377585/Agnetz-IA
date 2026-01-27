@@ -1,0 +1,35 @@
+version: 1
+generated_at_utc: "2026-01-27T10:51:12Z"
+
+sources:
+  preferences: ".agent/preferences.yaml"
+  team: "prefs/team.yaml"
+  ivan: "prefs/ivan.yaml"
+  accepted_decisions: ".agent/accepted-decisions.yaml"
+
+detected_stack:
+  backend:
+    runtime: "nodejs"
+    language: "typescript"
+    orm: "prisma"
+    validation: "unknown"
+  frontend:
+    framework: "react"
+
+resolved_defaults:
+  backend:
+    runtime: "nodejs"
+    language: "typescript"
+    framework: "express"
+    orm: "prisma"
+    validation: "zod"
+  infra:
+    gitops_bundle: "argocd+external-secrets+vault"
+  ci:
+    release: "semantic-release"
+
+accepted_decisions:
+  - "Use Prisma for DB access"
+  - "Use Zod for validation"
+  - "Use ArgoCD + External Secrets + Vault"
+  - "Use semantic-release with rc tags on staging"
