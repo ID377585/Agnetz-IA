@@ -1,0 +1,42 @@
+version: 1
+
+defaults:
+  language: "pt-BR"
+  backend:
+    runtime: "nodejs"
+    language: "typescript"
+    framework: "express"
+    orm: "prisma"
+    validation: "zod"
+    testing: "node-test"
+  frontend:
+    framework: "react"
+    build_tool: "vite"
+    styling: "tailwindcss"
+    testing: "vitest"
+  infra:
+    gitops: "argocd"
+    rollouts: "argo-rollouts"
+    secrets:
+      provider: "vault"
+      operator: "external-secrets"
+      encryption: "sops"
+    image_registry: "ghcr"
+  ci:
+    provider: "github-actions"
+    release: "semantic-release"
+  conventions:
+    commits: "conventional-commits"
+    tags: "vX.Y.Z"
+    staging_tags: "vX.Y.Z-rc.N"
+  rules:
+    secrets:
+      read_values: false
+      reference_only: true
+  ui:
+    tone: "direct"
+    ask_before_major_changes: false
+
+profiles:
+  team: "prefs/team.yaml"
+  ivan: "prefs/ivan.yaml"

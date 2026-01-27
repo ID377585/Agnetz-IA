@@ -1,0 +1,6 @@
+version: 1
+extends: ".agent/preferences.yaml"
+overrides:
+  language: "pt-BR"
+  ui:
+    tone: "direct"
