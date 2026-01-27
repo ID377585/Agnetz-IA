@@ -10,7 +10,9 @@
     "start": "node ./agnetz.js",
     "chat": "node ./agnetz.js",
     "test:ollama": "node ./tests/test-ollama.js",
-    "release": "semantic-release"
+    "release": "semantic-release",
+    "agent:resolve": "scripts/resolve_prefs.sh",
+    "agent:accept": "scripts/accept_decision.sh"
   },
   "dependencies": {
     "execa": "^9.6.1"
