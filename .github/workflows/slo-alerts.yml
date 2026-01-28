@@ -1,0 +1,81 @@
+name: SLO Alerts
+
+on:
+  schedule:
+    - cron: "15 * * * *" # hourly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+env:
+  SLO_WINDOW_HOURS: "24"
+  DEPLOY_FAILURE_THRESHOLD: "3"
+  ROLLBACK_THRESHOLD: "1"
+
+jobs:
+  slo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check SLOs
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const windowHours = Number(process.env.SLO_WINDOW_HOURS || "24");
+            const deployFailThreshold = Number(process.env.DEPLOY_FAILURE_THRESHOLD || "3");
+            const rollbackThreshold = Number(process.env.ROLLBACK_THRESHOLD || "1");
+            const since = new Date(Date.now() - windowHours * 3600 * 1000);
+
+            const workflows = [
+              { name: "Build, Scan, Push & Update GitOps", category: "deploy", threshold: deployFailThreshold },
+              { name: "Promote (staging → prod)", category: "deploy", threshold: deployFailThreshold },
+              { name: "Rollback (GitOps)", category: "rollback", threshold: rollbackThreshold },
+            ];
+
+            async function listRuns(workflowName) {
+              const { data } = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 50,
+                workflow_id: workflowName,
+                status: "completed",
+              });
+              return data.workflow_runs || [];
+            }
+
+            for (const wf of workflows) {
+              const runs = await listRuns(wf.name);
+              const recent = runs.filter(r => new Date(r.created_at) >= since);
+              const failures = recent.filter(r => r.conclusion === "failure").length;
+              if (failures >= wf.threshold) {
+                const title = `SLO alert: ${wf.name} failures`;
+                const body = [
+                  `Workflow: ${wf.name}`,
+                  `Window: last ${windowHours}h`,
+                  `Failures: ${failures}`,
+                  `Threshold: ${wf.threshold}`,
+                  ``,
+                  `Latest run: ${recent[0]?.html_url || "n/a"}`,
+                ].join("\n");
+
+                const existing = await github.rest.issues.listForRepo({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  state: "open",
+                  labels: "slo-alert",
+                  per_page: 50,
+                });
+
+                const already = existing.data.find(i => i.title === title);
+                if (!already) {
+                  await github.rest.issues.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title,
+                    body,
+                    labels: ["slo-alert", wf.category],
+                  });
+                }
+              }
+            }

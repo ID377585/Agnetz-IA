@@ -23,6 +23,14 @@ import { readCsvAsJson, summarizeCsv } from "./src/csvSimple.js";
 import { csvSummaryToMarkdown } from "./src/csvMarkdown.js";
 import { createObserver } from "./src/observability.js";
 
+if (process.env.OTEL_ENABLED === "1") {
+  const { initOtel, shutdownOtel } = await import("./src/otel.js");
+  await initOtel();
+  process.on("exit", () => {
+    shutdownOtel().catch(() => {});
+  });
+}
+
 // ==============================
 // Paths / constants
 // ==============================
