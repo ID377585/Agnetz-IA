@@ -1,3 +1,10 @@
+## [0.8.3](https://github.com/ID377585/Agnetz-IA/compare/v0.8.2...v0.8.3) (2026-01-28)
+
+
+### Bug Fixes
+
+* **ci:** rerun CI on failure and fix conftest URL ([f073c09](https://github.com/ID377585/Agnetz-IA/commit/f073c09b89a606e5186556bb83a6fd3058821d04))
+
 ## [0.8.2](https://github.com/ID377585/Agnetz-IA/compare/v0.8.1...v0.8.2) (2026-01-28)
 
 
