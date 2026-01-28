@@ -16,7 +16,8 @@
     "mcp:start": "node ./mcp-gateway.js"
   },
   "dependencies": {
-    "execa": "^9.6.1"
+    "execa": "^9.6.1",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "semantic-release": "^25.0.2",

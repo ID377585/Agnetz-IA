@@ -28,6 +28,12 @@ Environment variables:
 - `MCP_TELEGRAM_TOKEN`
 - `MCP_CHROME_WS` (Chrome DevTools WS URL)
 
+Actions:
+- `ollama`: `chat`
+- `notion`: `search`, `createPage`, `updatePage`, `appendBlocks`
+- `telegram`: `sendMessage`, `getUpdates`
+- `chrome`: `status`, `navigate`, `screenshot`, `evaluate`, `content`
+
 ## Logs
 JSONL logs at `data/mcp.log`:
 - `run_id`, `repo`, `env`, `event`, `ts`

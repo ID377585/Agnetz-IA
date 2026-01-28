@@ -25,6 +25,20 @@ export function createTelegramConnector() {
         }
         return await res.json();
       }
+      if (action === "getUpdates") {
+        const params = new URLSearchParams();
+        if (input?.offset) params.set("offset", String(input.offset));
+        if (input?.limit) params.set("limit", String(input.limit));
+        if (input?.timeout) params.set("timeout", String(input.timeout));
+        if (input?.allowed_updates) {
+          params.set("allowed_updates", JSON.stringify(input.allowed_updates));
+        }
+        const res = await fetch(`${baseUrl}/getUpdates?${params.toString()}`);
+        if (!res.ok) {
+          throw new Error(`telegram: ${res.status} ${await res.text()}`);
+        }
+        return await res.json();
+      }
       throw new Error(`telegram: unsupported action ${action}`);
     },
   };
