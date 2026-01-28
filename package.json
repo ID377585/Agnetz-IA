@@ -12,7 +12,8 @@
     "test:ollama": "node ./tests/test-ollama.js",
     "release": "semantic-release",
     "agent:resolve": "scripts/resolve_prefs.sh",
-    "agent:accept": "scripts/accept_decision.sh"
+    "agent:accept": "scripts/accept_decision.sh",
+    "mcp:start": "node ./mcp-gateway.js"
   },
   "dependencies": {
     "execa": "^9.6.1"
