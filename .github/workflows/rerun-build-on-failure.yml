@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - "Build, Scan, Push & Update GitOps"
+      - "CI"
     types:
       - completed
 
