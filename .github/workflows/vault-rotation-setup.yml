@@ -7,6 +7,8 @@ on:
         description: "Rotation period in days (metadata only)"
         required: false
         default: "90"
+  schedule:
+    - cron: "15 6 * * *" # daily (vault only)
 
 permissions:
   contents: read
@@ -21,6 +23,7 @@ env:
 
 jobs:
   setup:
+    if: ${{ vars.SECRET_PROVIDER == 'vault' }}
     runs-on: [self-hosted, vault-local]
     steps:
       - name: Auth to Vault (OIDC)

@@ -16,6 +16,7 @@ permissions:
 
 jobs:
   dispatch:
+    if: ${{ vars.SECRET_PROVIDER == 'vault' }}
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch rotation setup

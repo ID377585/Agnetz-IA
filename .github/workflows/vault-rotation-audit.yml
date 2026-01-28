@@ -19,6 +19,7 @@ env:
 
 jobs:
   audit:
+    if: ${{ vars.SECRET_PROVIDER == 'vault' }}
     runs-on: [self-hosted, vault-local]
     env:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
