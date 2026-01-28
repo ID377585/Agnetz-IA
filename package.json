@@ -13,7 +13,8 @@
     "release": "semantic-release",
     "agent:resolve": "scripts/resolve_prefs.sh",
     "agent:accept": "scripts/accept_decision.sh",
-    "mcp:start": "node ./mcp-gateway.js"
+    "mcp:start": "node ./mcp-gateway.js",
+    "test:mcp": "node ./tests/mcp-connectors-smoke.js"
   },
   "dependencies": {
     "execa": "^9.6.1",

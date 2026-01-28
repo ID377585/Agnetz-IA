@@ -23,6 +23,7 @@ import { readCsvAsJson, summarizeCsv } from "./src/csvSimple.js";
 import { csvSummaryToMarkdown } from "./src/csvMarkdown.js";
 import { createObserver } from "./src/observability.js";
 import { evaluateRisk, logDecision } from "./src/risk.js";
+import { listTools as mcpListTools, runTool as mcpRunTool } from "./src/mcp/client.js";
 
 if (process.env.OTEL_ENABLED === "1") {
   const { initOtel, shutdownOtel } = await import("./src/otel.js");
@@ -139,6 +140,8 @@ const args = process.argv.slice(2);
 
 const commandName = (() => {
   if (args.includes("--serve")) return "serve";
+  if (args.includes("--mcp-tools")) return "mcp-tools";
+  if (args.includes("--mcp-run")) return "mcp-run";
   if (args.includes("--reset")) return "reset";
   if (args.includes("--summary")) return "summary";
   if (args.includes("--validate-json")) return "validate-json";
@@ -162,6 +165,7 @@ const commandCategory = (() => {
   if (commandName === "summary" || commandName === "summarize") return "summary";
   if (commandName === "reset") return "reset";
   if (commandName === "serve") return "serve";
+  if (commandName.startsWith("mcp")) return "mcp";
   return "chat";
 })();
 
@@ -242,6 +246,8 @@ Comandos:
   agnetz --reset
   agnetz --summary
   agnetz --serve [--port 8787]
+  agnetz --mcp-tools
+  agnetz --mcp-run <connector> <action>   (input JSON via stdin)
   agnetz --validate-json <arquivo.json | '{"a":1}'>
   agnetz --read <arquivo>
   agnetz --write <arquivo> [conteúdo]         (ou via pipe: echo "x" | agnetz --write a.txt)
@@ -261,6 +267,8 @@ CSV:
   agnetz --csv-analyze <arquivo.csv> [--output destino.(txt|md|json)] [--format text|md|json]
 
 Exemplos:
+  agnetz --mcp-tools
+  echo '{"url":"https://example.com"}' | agnetz --mcp-run chrome navigate
   agnetz --csv-analyze data/clientes.csv --format md --output data/relatorio.md
   agnetz --csv-analyze data/clientes.csv --format json --output data/relatorio.json
   agnetz --csv-summary data/clientes.csv
@@ -283,6 +291,45 @@ if (args.includes("--serve")) {
 if (args.includes("--help") || args.includes("-h")) {
   printHelp();
   process.exit(0);
+}
+
+// ==============================
+// MCP: --mcp-tools
+// ==============================
+if (args.includes("--mcp-tools")) {
+  try {
+    const tools = await mcpListTools();
+    console.log(JSON.stringify(tools, null, 2));
+    process.exit(0);
+  } catch (err) {
+    console.error("Erro no --mcp-tools ❌");
+    console.error(err?.message || err);
+    process.exit(1);
+  }
+}
+
+// ==============================
+// MCP: --mcp-run <connector> <action>
+// ==============================
+if (args.includes("--mcp-run")) {
+  const idx = args.indexOf("--mcp-run");
+  const connector = args[idx + 1];
+  const action = args[idx + 2];
+  if (!connector || !action) {
+    console.log("Uso: agnetz --mcp-run <connector> <action> (input JSON via stdin)");
+    process.exit(1);
+  }
+  try {
+    const raw = await readStdinAll();
+    const inputJson = raw && raw.trim() ? JSON.parse(raw) : {};
+    const out = await mcpRunTool(connector, action, inputJson);
+    console.log(JSON.stringify(out, null, 2));
+    process.exit(0);
+  } catch (err) {
+    console.error("Erro no --mcp-run ❌");
+    console.error(err?.message || err);
+    process.exit(1);
+  }
 }
 
 // ==============================
