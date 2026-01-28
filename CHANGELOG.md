@@ -1,3 +1,10 @@
+## [0.8.4](https://github.com/ID377585/Agnetz-IA/compare/v0.8.3...v0.8.4) (2026-01-28)
+
+
+### Bug Fixes
+
+* **ci:** make vault/gcp workflows valid and skippable ([510ce98](https://github.com/ID377585/Agnetz-IA/commit/510ce9828d757502165d43c077f02be74927783f))
+
 ## [0.8.3](https://github.com/ID377585/Agnetz-IA/compare/v0.8.2...v0.8.3) (2026-01-28)
 
 
