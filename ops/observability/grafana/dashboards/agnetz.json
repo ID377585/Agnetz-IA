@@ -1,0 +1,68 @@
+{
+  "uid": "agnetz-main",
+  "title": "Agnetz.IA - Core",
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Runs (total)",
+      "id": 1,
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "agnetz_runs_total", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Runs (success)",
+      "id": 2,
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "agnetz_runs_success", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Runs (failure)",
+      "id": 3,
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "agnetz_runs_failure", "refId": "A" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Avg run duration (ms)",
+      "id": 4,
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 0 },
+      "targets": [
+        { "expr": "agnetz_runs_duration_ms_avg", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Runs by category (failures)",
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 4 },
+      "targets": [
+        { "expr": "sum by (category) (agnetz_failures_by_category)", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Steps duration (sum)",
+      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 4 },
+      "targets": [
+        { "expr": "sum by (step) (agnetz_step_duration_ms_sum)", "refId": "A" }
+      ]
+    }
+  ],
+  "annotations": { "list": [] },
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": { "refresh_intervals": ["10s","30s","1m","5m","15m"] }
+}

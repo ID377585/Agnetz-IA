@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Agnetz
+    orgId: 1
+    folder: "Agnetz.IA"
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

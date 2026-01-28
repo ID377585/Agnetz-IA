@@ -12,3 +12,4 @@ Prometheus:
 
 Grafana:
 - `http://localhost:3000` (admin/admin)
+- Dashboard provisioned automatically under folder "Agnetz.IA"
