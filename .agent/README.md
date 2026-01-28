@@ -5,6 +5,7 @@ Files:
 - `prefs/team.yaml` -> `prefs/ivan.yaml`: layered overrides.
 - `.agent/accepted-decisions.yaml`: decisions that become sticky defaults.
 - `.agent/resolved.yaml`: generated snapshot used by the agent.
+- `.agent/risk-policy.json`: risk matrix and safeguards.
 
 How it works:
 1) Detect the stack from the repo (Node/TS, Prisma, Zod, etc.).
@@ -22,3 +23,8 @@ Priority (highest -> lowest):
 2) `prefs/ivan.yaml`
 3) `prefs/team.yaml`
 4) `.agent/preferences.yaml`
+
+Risk policy:
+- Actions are classified as low/medium/high.
+- Medium/high require plan+diff; high requires checks.
+- Audit is append-only in `data/decision-audit.log`.

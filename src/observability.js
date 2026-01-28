@@ -204,5 +204,5 @@ export function createObserver({ dataDir, repo, env } = {}) {
     return server;
   }
 
-  return { startRun, endRun, recordStep, log, startServer };
+  return { startRun, endRun, recordStep, log, startServer, runId };
 }

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "default_risk": "medium",
+  "actions": {
+    "code_generate": { "risk": "low" },
+    "open_pr": { "risk": "medium" },
+    "merge_main": { "risk": "high", "checks_required": true },
+    "deploy_staging": { "risk": "medium" },
+    "deploy_prod": { "risk": "high", "checks_required": true },
+    "rollback": { "risk": "high", "checks_required": true },
+    "delete_resource": { "risk": "high", "plan_required": true },
+    "rotate_secret": { "risk": "high", "plan_required": true },
+    "update_gitops": { "risk": "medium" }
+  },
+  "safeguards": {
+    "low": { "plan_required": false, "diff_required": false },
+    "medium": { "plan_required": true, "diff_required": true },
+    "high": { "plan_required": true, "diff_required": true, "checks_required": true }
+  },
+  "env_policies": {
+    "prod": {
+      "default_risk": "high",
+      "actions": {
+        "deploy_prod": { "risk": "high", "checks_required": true },
+        "merge_main": { "risk": "high", "checks_required": true }
+      }
+    }
+  },
+  "audit": {
+    "append_only": true,
+    "destination": "data/decision-audit.log"
+  }
+}

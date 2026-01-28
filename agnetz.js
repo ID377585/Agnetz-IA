@@ -22,6 +22,7 @@ import { AgnetzIA } from "./src/AgnetzIA.js";
 import { readCsvAsJson, summarizeCsv } from "./src/csvSimple.js";
 import { csvSummaryToMarkdown } from "./src/csvMarkdown.js";
 import { createObserver } from "./src/observability.js";
+import { evaluateRisk, logDecision } from "./src/risk.js";
 
 if (process.env.OTEL_ENABLED === "1") {
   const { initOtel, shutdownOtel } = await import("./src/otel.js");
@@ -172,6 +173,23 @@ const obs = createObserver({
 const run = obs.startRun({ command: commandName, category: commandCategory });
 const stepStart = Date.now();
 
+const policyPath = path.join(ROOT, ".agent", "risk-policy.json");
+const envName = process.env.AGNETZ_ENV || process.env.NODE_ENV || "local";
+const riskEval = evaluateRisk({
+  action: commandName,
+  env: envName,
+  policyPath,
+});
+logDecision({
+  policyPath,
+  action: commandName,
+  env: envName,
+  runId: obs.runId,
+  inputs: { args },
+  status: "planned",
+  reason: `risk=${riskEval.risk}`,
+});
+
 const originalExit = process.exit;
 process.exit = (code = 0) => {
   obs.recordStep({
@@ -183,6 +201,14 @@ process.exit = (code = 0) => {
     status: code === 0 ? "success" : "failure",
     durationMs: Date.now() - stepStart,
     category: commandCategory,
+  });
+  logDecision({
+    policyPath,
+    action: commandName,
+    env: envName,
+    runId: obs.runId,
+    outputs: { exit_code: code },
+    status: code === 0 ? "success" : "failure",
   });
   return originalExit(code);
 };

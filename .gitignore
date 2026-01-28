@@ -38,6 +38,7 @@ k8s/**/secret-*.yaml
 # --- OBSERVABILITY ---
 data/metrics.json
 data/observability.log
+data/decision-audit.log
 pub-cert.pem
 pub-cert.pem
 semantic-release-dry.log
