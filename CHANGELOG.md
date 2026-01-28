@@ -1,3 +1,10 @@
+# [0.9.0](https://github.com/ID377585/Agnetz-IA/compare/v0.8.4...v0.9.0) (2026-01-28)
+
+
+### Features
+
+* **obs:** add metrics, logs, and health endpoints ([669218b](https://github.com/ID377585/Agnetz-IA/commit/669218ba7d2ec76dbdd50d1f6794f1963808e57c))
+
 ## [0.8.4](https://github.com/ID377585/Agnetz-IA/compare/v0.8.3...v0.8.4) (2026-01-28)
 
 
