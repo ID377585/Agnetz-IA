@@ -1,3 +1,10 @@
+## [0.8.2](https://github.com/ID377585/Agnetz-IA/compare/v0.8.1...v0.8.2) (2026-01-28)
+
+
+### Bug Fixes
+
+* **policy:** install conftest from releases ([262021b](https://github.com/ID377585/Agnetz-IA/commit/262021bf5062b7393f1f39e7e536e00cffc9b793))
+
 ## [0.8.1](https://github.com/ID377585/Agnetz-IA/compare/v0.8.0...v0.8.1) (2026-01-27)
 
 
