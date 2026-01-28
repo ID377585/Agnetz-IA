@@ -5,7 +5,14 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if ! command -v conftest >/dev/null 2>&1; then
   echo "Installing conftest..."
-  curl -sSfL https://raw.githubusercontent.com/open-policy-agent/conftest/master/install.sh | sh -s -- -b /usr/local/bin
+  VERSION="0.56.0"
+  OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+  ARCH="$(uname -m)"
+  if [ "$ARCH" = "x86_64" ]; then ARCH="amd64"; fi
+  if [ "$ARCH" = "aarch64" ] || [ "$ARCH" = "arm64" ]; then ARCH="arm64"; fi
+  URL="https://github.com/open-policy-agent/conftest/releases/download/v${VERSION}/conftest_${VERSION}_${OS}_${ARCH}.tar.gz"
+  curl -sSfL "$URL" | tar -xz -C /tmp
+  install -m 0755 /tmp/conftest /usr/local/bin/conftest
 fi
 
 TARGETS=(
