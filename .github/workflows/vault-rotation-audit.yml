@@ -81,20 +81,7 @@ jobs:
             fi
             expires=$(echo "$desc" | jq -r '.Tags[]? | select(.Key=="expires_at") | .Value' || true)
             if [ -n "$expires" ]; then
-              exp_ts=$(EXPIRES="$expires" python3 - <<'PY'
-import os, datetime as d, sys
-s=os.environ.get("EXPIRES","")
-if not s:
-    print(0); sys.exit(0)
-if s.endswith("Z"):
-    s=s[:-1]+"+00:00"
-try:
-    dt=d.datetime.fromisoformat(s)
-    print(int(dt.timestamp()))
-except Exception:
-    print(0)
-PY
-)
+              exp_ts=$(date -u -d "$expires" +%s 2>/dev/null || echo 0)
               if [ "$exp_ts" -le "$now" ]; then
                 echo "Secret expired: $s (expires_at=$expires)"
                 failures=$((failures+1))
@@ -150,20 +137,7 @@ PY
             fi
             next_rot=$(echo "$desc" | jq -r '.rotation.nextRotationTime // empty')
             if [ -n "$next_rot" ] && [ "$next_rot" != "null" ]; then
-              next_ts=$(EXPIRES="$next_rot" python3 - <<'PY'
-import os, datetime as d, sys
-s=os.environ.get("EXPIRES","")
-if not s:
-    print(0); sys.exit(0)
-if s.endswith("Z"):
-    s=s[:-1]+"+00:00"
-try:
-    dt=d.datetime.fromisoformat(s)
-    print(int(dt.timestamp()))
-except Exception:
-    print(0)
-PY
-)
+              next_ts=$(date -u -d "$next_rot" +%s 2>/dev/null || echo 0)
               if [ "$next_ts" -le "$now" ]; then
                 echo "Rotation overdue: $s (nextRotationTime=$next_rot)"
                 failures=$((failures+1))
@@ -218,20 +192,7 @@ PY
               failures=$((failures+1))
             fi
             if [ -n "$expires" ]; then
-              exp_ts=$(EXPIRES="$expires" python3 - <<'PY'
-import os, datetime as d, sys
-s=os.environ.get("EXPIRES","")
-if not s:
-    print(0); sys.exit(0)
-if s.endswith("Z"):
-    s=s[:-1]+"+00:00"
-try:
-    dt=d.datetime.fromisoformat(s)
-    print(int(dt.timestamp()))
-except Exception:
-    print(0)
-PY
-)
+              exp_ts=$(date -u -d "$expires" +%s 2>/dev/null || echo 0)
               if [ "$exp_ts" -le "$now" ]; then
                 echo "Secret expired: $s (expires_at=$expires)"
                 failures=$((failures+1))

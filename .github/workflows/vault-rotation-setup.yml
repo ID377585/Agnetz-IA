@@ -44,17 +44,8 @@ jobs:
           fi
 
           days="${{ github.event.inputs.rotation_days }}"
-          now=$(python3 - <<'PY'
-import datetime as d
-print(d.datetime.now(d.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"))
-PY
-)
-          expires=$(python3 - <<PY
-import datetime as d
-days=int("${days}")
-print((d.datetime.now(d.timezone.utc)+d.timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%SZ"))
-PY
-)
+          now=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          expires=$(date -u -d "+${days} days" +"%Y-%m-%dT%H:%M:%SZ")
 
           IFS=',' read -ra SECRETS <<< "${SECRETS_LIST}"
           for s in "${SECRETS[@]}"; do
