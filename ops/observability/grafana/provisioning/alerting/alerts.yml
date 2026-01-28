@@ -1,0 +1,54 @@
+apiVersion: 1
+
+groups:
+  - orgId: 1
+    name: Agnetz.IA Alerts
+    folder: Agnetz.IA
+    interval: 1m
+    rules:
+      - uid: deploy-fail-3x
+        title: Deploy failed 3x (24h)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: increase(agnetz_failures_by_category{category="deploy"}[24h])
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: A >= 3
+              type: math
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 1m
+        annotations:
+          summary: "Deploy falhou 3x nas últimas 24h"
+      - uid: rollback-triggered
+        title: Rollback acionado (24h)
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 86400
+              to: 0
+            datasourceUid: prometheus
+            model:
+              expr: increase(agnetz_failures_by_category{category="rollback"}[24h])
+              refId: A
+          - refId: C
+            datasourceUid: __expr__
+            model:
+              expression: A >= 1
+              type: math
+              refId: C
+        noDataState: OK
+        execErrState: Error
+        for: 1m
+        annotations:
+          summary: "Rollback acionado nas últimas 24h"
