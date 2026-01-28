@@ -21,6 +21,7 @@ import { AgnetzIA } from "./src/AgnetzIA.js";
 
 import { readCsvAsJson, summarizeCsv } from "./src/csvSimple.js";
 import { csvSummaryToMarkdown } from "./src/csvMarkdown.js";
+import { createObserver } from "./src/observability.js";
 
 // ==============================
 // Paths / constants
@@ -127,6 +128,66 @@ ensureDataDir();
 
 const args = process.argv.slice(2);
 
+const commandName = (() => {
+  if (args.includes("--serve")) return "serve";
+  if (args.includes("--reset")) return "reset";
+  if (args.includes("--summary")) return "summary";
+  if (args.includes("--validate-json")) return "validate-json";
+  if (args.includes("--read")) return "read";
+  if (args.includes("--write")) return "write";
+  if (args.includes("--summarize")) return "summarize";
+  if (args.includes("--extract-facts")) return "extract-facts";
+  if (args.includes("--plan")) return "plan";
+  if (args.includes("--plan-show")) return "plan-show";
+  if (args.includes("--execute")) return "execute";
+  if (args.includes("--csv-read")) return "csv-read";
+  if (args.includes("--csv-summary")) return "csv-summary";
+  if (args.includes("--csv-analyze")) return "csv-analyze";
+  return "chat";
+})();
+
+const commandCategory = (() => {
+  if (commandName.startsWith("csv")) return "csv";
+  if (commandName === "plan" || commandName === "execute") return "plan";
+  if (commandName === "read" || commandName === "write") return "files";
+  if (commandName === "summary" || commandName === "summarize") return "summary";
+  if (commandName === "reset") return "reset";
+  if (commandName === "serve") return "serve";
+  return "chat";
+})();
+
+const obs = createObserver({
+  dataDir: DATA_DIR,
+  repo: path.basename(ROOT),
+  env: process.env.NODE_ENV || "local",
+});
+const run = obs.startRun({ command: commandName, category: commandCategory });
+const stepStart = Date.now();
+
+const originalExit = process.exit;
+process.exit = (code = 0) => {
+  obs.recordStep({
+    name: commandName,
+    durationMs: Date.now() - stepStart,
+    status: code === 0 ? "success" : "failure",
+  });
+  obs.endRun({
+    status: code === 0 ? "success" : "failure",
+    durationMs: Date.now() - stepStart,
+    category: commandCategory,
+  });
+  return originalExit(code);
+};
+
+process.on("uncaughtException", (err) => {
+  obs.log("run.error", { error: String(err?.message || err) });
+  process.exit(1);
+});
+process.on("unhandledRejection", (err) => {
+  obs.log("run.error", { error: String(err?.message || err) });
+  process.exit(1);
+});
+
 // Provider default
 const provider = new OllamaProvider({
   baseUrl: "http://localhost:11434",
@@ -146,6 +207,7 @@ Comandos:
   agnetz --help
   agnetz --reset
   agnetz --summary
+  agnetz --serve [--port 8787]
   agnetz --validate-json <arquivo.json | '{"a":1}'>
   agnetz --read <arquivo>
   agnetz --write <arquivo> [conteúdo]         (ou via pipe: echo "x" | agnetz --write a.txt)
@@ -170,6 +232,15 @@ Exemplos:
   agnetz --csv-summary data/clientes.csv
   agnetz --csv-summary data/clientes.csv --format md --out data/relatorio.md
 `);
+}
+
+if (args.includes("--serve")) {
+  const idx = args.indexOf("--port");
+  const port =
+    idx >= 0 && args[idx + 1] ? Number(args[idx + 1]) : Number(process.env.AGNETZ_OBS_PORT || 8787);
+  obs.startServer({ port });
+  // keep alive
+  setInterval(() => {}, 1_000_000);
 }
 
 // ==============================
