@@ -14,6 +14,7 @@ const backendUrlEl = document.getElementById("backend-url");
 const mcpUrlEl = document.getElementById("mcp-url");
 const mcpTokenEl = document.getElementById("mcp-token");
 const voiceEnabledEl = document.getElementById("voice-enabled");
+const voicePersonaEl = document.getElementById("voice-persona");
 const voiceRateEl = document.getElementById("voice-rate");
 const saveConfigBtn = document.getElementById("save-config");
 const clearQueueBtn = document.getElementById("clear-queue");
@@ -25,12 +26,14 @@ const overlayFace = document.getElementById("overlay-face");
 
 let audioCtx;
 let lastTaskPoll = 0;
+let eventSource;
 
 const defaultConfig = {
   backendUrl: "http://localhost:8787",
   mcpUrl: "http://localhost:8788",
   mcpToken: "",
   voiceEnabled: true,
+  voicePersona: "calma",
   voiceRate: 1.0,
 };
 
@@ -74,7 +77,18 @@ function speak(text) {
   const female = voices.find((v) => /female|brasil|portuguese/i.test(v.name)) || voices[0];
   if (female) utter.voice = female;
   utter.lang = "pt-BR";
-  utter.rate = Number(state.config.voiceRate || 1);
+  const persona = state.config.voicePersona || "calma";
+  const baseRate = Number(state.config.voiceRate || 1);
+  if (persona === "rapida") {
+    utter.rate = Math.min(1.3, baseRate + 0.2);
+    utter.pitch = 1.1;
+  } else if (persona === "brava") {
+    utter.rate = Math.max(0.9, baseRate);
+    utter.pitch = 0.8;
+  } else {
+    utter.rate = baseRate;
+    utter.pitch = 1.0;
+  }
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utter);
 }
@@ -197,6 +211,7 @@ function applyConfig() {
   mcpUrlEl.value = state.config.mcpUrl || "";
   mcpTokenEl.value = state.config.mcpToken || "";
   voiceEnabledEl.checked = state.config.voiceEnabled;
+  voicePersonaEl.value = state.config.voicePersona || "calma";
   voiceRateEl.value = state.config.voiceRate || 1.0;
 }
 
@@ -237,6 +252,19 @@ function addMessage(role, content) {
   saveStore("agnetz.chat", state.messages);
   renderChat();
   if (role === "bot") speak(msg.content);
+}
+
+function connectEvents() {
+  if (!state.config.backendUrl) return;
+  if (eventSource) eventSource.close();
+  eventSource = new EventSource(`${state.config.backendUrl}/api/events`);
+  eventSource.onmessage = (evt) => {
+    if (!evt.data) return;
+    pushOverlayLog(evt.data);
+  };
+  eventSource.onerror = () => {
+    // ignore
+  };
 }
 
 function enqueueTask(type, status = "pendente") {
@@ -326,6 +354,10 @@ sendBtn.addEventListener("click", async () => {
     try {
       pushOverlayLog(`Enviando ${state.attachments.length} anexo(s)`);
       const uploaded = await uploadAttachments();
+      addMessage(
+        "user",
+        `📎 Anexos enviados: ${uploaded.map((f) => f.originalname).join(", ")}`
+      );
       addMessage("bot", `Anexos enviados: ${uploaded.length}`);
     } catch (err) {
       addMessage("bot", `Falha ao enviar anexos: ${err?.message || err}`);
@@ -363,10 +395,12 @@ saveConfigBtn.addEventListener("click", () => {
     mcpUrl: mcpUrlEl.value.trim() || defaultConfig.mcpUrl,
     mcpToken: mcpTokenEl.value.trim(),
     voiceEnabled: voiceEnabledEl.checked,
+    voicePersona: voicePersonaEl.value,
     voiceRate: Number(voiceRateEl.value || 1.0),
   };
   saveStore("agnetz.config", state.config);
   updateStatus();
+  connectEvents();
 });
 
 clearQueueBtn.addEventListener("click", () => {
@@ -407,5 +441,6 @@ renderTasks();
 renderAttachments();
 updateStatus();
 fetchTasks();
+connectEvents();
 setInterval(updateStatus, 15000);
 setInterval(fetchTasks, 8000);

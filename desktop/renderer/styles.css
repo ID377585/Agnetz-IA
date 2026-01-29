@@ -385,6 +385,14 @@ input[type="password"] {
   font-size: 12px;
 }
 
+select {
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #fff;
+}
+
 input[type="range"] {
   width: 100%;
 }
