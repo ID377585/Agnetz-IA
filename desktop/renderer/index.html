@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agnetz.IA Desktop</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">Agnetz.IA</div>
+          <p class="subtitle">Autonomia com controle</p>
+        </div>
+
+        <div class="agent-card">
+          <div class="cube" id="agent-face">
+            <div class="face">
+              <div class="eye left"></div>
+              <div class="eye right"></div>
+              <div class="mouth"></div>
+            </div>
+          </div>
+          <div class="agent-status">
+            <div class="status-pill" id="agent-status">offline</div>
+            <div class="status-detail" id="agent-detail">Aguardando conexão</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Status</h3>
+          <div class="status-list">
+            <div class="status-item">
+              <span>Agente</span>
+              <span id="status-agent">--</span>
+            </div>
+            <div class="status-item">
+              <span>MCP Gateway</span>
+              <span id="status-mcp">--</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Fila de tarefas</h3>
+          <div id="task-queue" class="task-queue"></div>
+          <button class="ghost" id="clear-queue">Limpar fila</button>
+        </div>
+
+        <div class="section">
+          <h3>Ações rápidas</h3>
+          <div class="actions">
+            <button class="primary" data-action="deploy">Deploy</button>
+            <button class="secondary" data-action="rollback">Rollback</button>
+            <button class="secondary" data-action="mcp">MCP</button>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>Configuração</h3>
+          <label>Backend URL
+            <input type="text" id="backend-url" placeholder="http://localhost:8787" />
+          </label>
+          <label>MCP URL
+            <input type="text" id="mcp-url" placeholder="http://localhost:8788" />
+          </label>
+          <label>Token MCP
+            <input type="password" id="mcp-token" placeholder="Bearer" />
+          </label>
+          <button class="ghost" id="save-config">Salvar</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="header">
+          <div>
+            <h1>Chat do Agente</h1>
+            <p>Converse, acione automações e acompanhe o histórico.</p>
+          </div>
+          <div class="meta">
+            <span>Desktop</span>
+            <span class="dot"></span>
+            <span>Local</span>
+          </div>
+        </header>
+
+        <section class="chat" id="chat"></section>
+
+        <section class="attachments">
+          <div class="attach-header">
+            <span>Anexos</span>
+            <label class="attach-btn">
+              + Adicionar
+              <input type="file" id="file-input" multiple />
+            </label>
+          </div>
+          <div class="attach-list" id="attach-list"></div>
+        </section>
+
+        <section class="composer">
+          <textarea id="prompt" placeholder="Digite sua mensagem..."></textarea>
+          <button class="primary" id="send">Enviar</button>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
