@@ -126,6 +126,8 @@ function beep(type = "work") {
     if (type === "deploy") osc.frequency.value = 740;
     else if (type === "rollback") osc.frequency.value = 460;
     else if (type === "mcp") osc.frequency.value = 620;
+    else if (type === "success") osc.frequency.value = 980;
+    else if (type === "error") osc.frequency.value = 300;
     else osc.frequency.value = type === "done" ? 880 : 520;
     gain.gain.value = 0.04;
     osc.connect(gain);
@@ -159,12 +161,14 @@ function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
     overlayTitle.textContent = title;
     overlaySub.textContent = detail || "Preparando tudo para você.";
     overlayTerminal.innerHTML = "";
+    overlayTitle.classList.add("working");
     overlayFace.classList.add("working");
     overlayFace.classList.add("fly");
     floatingCube.classList.add("roam");
     typingSound(true);
   } else {
     overlay.classList.remove("show");
+    overlayTitle.classList.remove("working");
     overlayFace.classList.remove("working");
     overlayFace.classList.remove("fly");
     floatingCube.classList.remove("roam");
@@ -225,7 +229,9 @@ function pointCubeTo(element) {
   const rect = element.getBoundingClientRect();
   floatingFace.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
   floatingFace.classList.add("happy");
+  floatingFace.classList.add("vibrate");
   setTimeout(() => floatingFace.classList.remove("happy"), 600);
+  setTimeout(() => floatingFace.classList.remove("vibrate"), 600);
 }
 
 function spawnSparks(element) {
@@ -448,12 +454,13 @@ sendBtn.addEventListener("click", async () => {
     setFace("happy");
     setOverlayVisible(false);
     launchConfetti();
-    beep("done");
+    beep("success");
     setTimeout(() => setFace("idle"), 1200);
   } catch (err) {
     addMessage("bot", `Erro ao chamar MCP: ${err?.message || err}`);
     setFace("sleep");
     setOverlayVisible(false, "Ops…", "Algo falhou no caminho.");
+    beep("error");
   }
 });
 
