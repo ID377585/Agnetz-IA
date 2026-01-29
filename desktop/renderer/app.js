@@ -30,6 +30,7 @@ const floatingFace = document.getElementById("floating-face");
 let audioCtx;
 let lastTaskPoll = 0;
 let eventSource;
+let typingInterval;
 
 const defaultConfig = {
   backendUrl: "http://localhost:8787",
@@ -136,6 +137,22 @@ function beep(type = "work") {
   }
 }
 
+function typingSound(on) {
+  try {
+    if (on) {
+      if (typingInterval) return;
+      typingInterval = setInterval(() => {
+        beep("work");
+      }, 220);
+    } else if (typingInterval) {
+      clearInterval(typingInterval);
+      typingInterval = null;
+    }
+  } catch {
+    // ignore
+  }
+}
+
 function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
   if (visible) {
     overlay.classList.add("show");
@@ -145,11 +162,13 @@ function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
     overlayFace.classList.add("working");
     overlayFace.classList.add("fly");
     floatingCube.classList.add("roam");
+    typingSound(true);
   } else {
     overlay.classList.remove("show");
     overlayFace.classList.remove("working");
     overlayFace.classList.remove("fly");
     floatingCube.classList.remove("roam");
+    typingSound(false);
   }
 }
 
@@ -207,6 +226,22 @@ function pointCubeTo(element) {
   floatingFace.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
   floatingFace.classList.add("happy");
   setTimeout(() => floatingFace.classList.remove("happy"), 600);
+}
+
+function spawnSparks(element) {
+  if (!element) return;
+  const rect = element.getBoundingClientRect();
+  for (let i = 0; i < 8; i += 1) {
+    const s = document.createElement("div");
+    s.className = "spark";
+    s.style.left = `${rect.left + rect.width / 2}px`;
+    s.style.top = `${rect.top + rect.height / 2}px`;
+    s.style.setProperty("--dx", `${(Math.random() - 0.5) * 60}px`);
+    s.style.setProperty("--dy", `${(Math.random() - 0.5) * 60}px`);
+    s.style.background = ["#38bdf8", "#60a5fa", "#f59e0b", "#22c55e"][i % 4];
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 800);
+  }
 }
 
 function renderChat() {
@@ -456,6 +491,7 @@ Array.from(document.querySelectorAll("[data-action]")).forEach((btn) => {
     enqueueTask(type, "pendente");
     pointCubeTo(btn);
     beep(type);
+    spawnSparks(btn);
 
     if (!state.config.backendUrl) {
       enqueueTask(type, "backend não configurado");
