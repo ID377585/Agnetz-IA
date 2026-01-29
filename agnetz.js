@@ -142,6 +142,10 @@ const commandName = (() => {
   if (args.includes("--serve")) return "serve";
   if (args.includes("--mcp-tools")) return "mcp-tools";
   if (args.includes("--mcp-run")) return "mcp-run";
+  if (args.includes("--mcp-screenshot")) return "mcp-screenshot";
+  if (args.includes("--mcp-navigate")) return "mcp-navigate";
+  if (args.includes("--mcp-eval")) return "mcp-eval";
+  if (args.includes("--mcp-content")) return "mcp-content";
   if (args.includes("--reset")) return "reset";
   if (args.includes("--summary")) return "summary";
   if (args.includes("--validate-json")) return "validate-json";
@@ -248,6 +252,10 @@ Comandos:
   agnetz --serve [--port 8787]
   agnetz --mcp-tools
   agnetz --mcp-run <connector> <action>   (input JSON via stdin)
+  agnetz --mcp-navigate <url>
+  agnetz --mcp-screenshot <url> [--out caminho.png]
+  agnetz --mcp-eval <expressão>
+  agnetz --mcp-content
   agnetz --validate-json <arquivo.json | '{"a":1}'>
   agnetz --read <arquivo>
   agnetz --write <arquivo> [conteúdo]         (ou via pipe: echo "x" | agnetz --write a.txt)
@@ -269,6 +277,7 @@ CSV:
 Exemplos:
   agnetz --mcp-tools
   echo '{"url":"https://example.com"}' | agnetz --mcp-run chrome navigate
+  agnetz --mcp-screenshot https://example.com --out data/site.png
   agnetz --csv-analyze data/clientes.csv --format md --output data/relatorio.md
   agnetz --csv-analyze data/clientes.csv --format json --output data/relatorio.json
   agnetz --csv-summary data/clientes.csv
@@ -327,6 +336,84 @@ if (args.includes("--mcp-run")) {
     process.exit(0);
   } catch (err) {
     console.error("Erro no --mcp-run ❌");
+    console.error(err?.message || err);
+    process.exit(1);
+  }
+}
+
+// ==============================
+// MCP shortcuts
+// ==============================
+if (args.includes("--mcp-navigate")) {
+  const idx = args.indexOf("--mcp-navigate");
+  const url = args[idx + 1];
+  if (!url) {
+    console.log("Uso: agnetz --mcp-navigate <url>");
+    process.exit(1);
+  }
+  try {
+    const out = await mcpRunTool("chrome", "navigate", { url });
+    console.log(JSON.stringify(out, null, 2));
+    process.exit(0);
+  } catch (err) {
+    console.error("Erro no --mcp-navigate ❌");
+    console.error(err?.message || err);
+    process.exit(1);
+  }
+}
+
+if (args.includes("--mcp-screenshot")) {
+  const idx = args.indexOf("--mcp-screenshot");
+  const url = args[idx + 1];
+  const outIdx = args.indexOf("--out");
+  const outFile = outIdx >= 0 ? args[outIdx + 1] : "data/screenshot.png";
+  if (!url) {
+    console.log("Uso: agnetz --mcp-screenshot <url> [--out caminho.png]");
+    process.exit(1);
+  }
+  try {
+    await mcpRunTool("chrome", "navigate", { url });
+    const shot = await mcpRunTool("chrome", "screenshot", {});
+    const data = shot?.output?.data || shot?.output?.result?.data || shot?.output?.data;
+    if (!data) throw new Error("screenshot sem dados");
+    const abs = path.isAbsolute(outFile) ? outFile : path.join(ROOT, outFile);
+    const dir = path.dirname(abs);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(abs, Buffer.from(data, "base64"));
+    console.log(`Screenshot salvo ✅: ${abs}`);
+    process.exit(0);
+  } catch (err) {
+    console.error("Erro no --mcp-screenshot ❌");
+    console.error(err?.message || err);
+    process.exit(1);
+  }
+}
+
+if (args.includes("--mcp-eval")) {
+  const idx = args.indexOf("--mcp-eval");
+  const expression = args.slice(idx + 1).join(" ");
+  if (!expression) {
+    console.log("Uso: agnetz --mcp-eval <expressão>");
+    process.exit(1);
+  }
+  try {
+    const out = await mcpRunTool("chrome", "evaluate", { expression });
+    console.log(JSON.stringify(out, null, 2));
+    process.exit(0);
+  } catch (err) {
+    console.error("Erro no --mcp-eval ❌");
+    console.error(err?.message || err);
+    process.exit(1);
+  }
+}
+
+if (args.includes("--mcp-content")) {
+  try {
+    const out = await mcpRunTool("chrome", "content", {});
+    console.log(JSON.stringify(out, null, 2));
+    process.exit(0);
+  } catch (err) {
+    console.error("Erro no --mcp-content ❌");
     console.error(err?.message || err);
     process.exit(1);
   }

@@ -100,7 +100,7 @@ async function ping(url) {
 }
 
 async function updateStatus() {
-  const backendOk = await ping(state.config.backendUrl);
+  const backendOk = await ping(`${state.config.backendUrl}/api`);
   const mcpOk = await ping(state.config.mcpUrl);
 
   statusAgent.textContent = backendOk ? "online" : "offline";
@@ -164,6 +164,22 @@ async function runMcpChat(message) {
   return content;
 }
 
+async function uploadAttachments() {
+  if (!state.attachments.length) return [];
+  if (!state.config.backendUrl) return [];
+  const form = new FormData();
+  state.attachments.forEach((file) => form.append("files", file));
+  const res = await fetch(`${state.config.backendUrl}/api/attachments`, {
+    method: "POST",
+    body: form,
+  });
+  if (!res.ok) {
+    throw new Error(await res.text());
+  }
+  const json = await res.json();
+  return json.files || [];
+}
+
 sendBtn.addEventListener("click", async () => {
   const content = promptEl.value.trim();
   if (!content) return;
@@ -173,7 +189,12 @@ sendBtn.addEventListener("click", async () => {
   setFace("thinking");
 
   if (state.attachments.length) {
-    addMessage("bot", `Recebi ${state.attachments.length} anexo(s). Vou processar quando o backend suportar upload.`);
+    try {
+      const uploaded = await uploadAttachments();
+      addMessage("bot", `Anexos enviados: ${uploaded.length}`);
+    } catch (err) {
+      addMessage("bot", `Falha ao enviar anexos: ${err?.message || err}`);
+    }
     state.attachments = [];
     renderAttachments();
   }
@@ -223,9 +244,14 @@ Array.from(document.querySelectorAll("[data-action]")).forEach((btn) => {
     }
 
     try {
-      const res = await fetch(`${state.config.backendUrl}/actions/${type}`, { method: "POST" });
+      const res = await fetch(`${state.config.backendUrl}/api/actions/${type}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "desktop" }),
+      });
       if (!res.ok) throw new Error(await res.text());
-      enqueueTask(type, "executado");
+      const json = await res.json();
+      enqueueTask(type, json?.task?.status || "executado");
     } catch (err) {
       enqueueTask(type, `erro: ${err?.message || err}`);
     }
