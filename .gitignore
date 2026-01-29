@@ -41,6 +41,7 @@ data/metrics.json
 data/observability.log
 data/decision-audit.log
 data/mcp.log
+backend/data/
 pub-cert.pem
 pub-cert.pem
 semantic-release-dry.log
