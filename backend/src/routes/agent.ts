@@ -10,6 +10,7 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
 const TASKS_FILE = path.join(DATA_DIR, "tasks.json");
 const EVENTS_FILE = path.join(DATA_DIR, "events.log");
+const MCP_LOG = process.env.MCP_LOG_PATH || path.join(process.cwd(), "..", "data", "mcp.log");
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -119,6 +120,7 @@ agentRouter.get("/events", (req, res) => {
   res.setHeader("Connection", "keep-alive");
 
   let lastSize = 0;
+  let lastMcpSize = 0;
 
   const sendLine = (line: string) => {
     res.write(`data: ${line}\n\n`);
@@ -134,6 +136,16 @@ agentRouter.get("/events", (req, res) => {
       .forEach(sendLine);
   }
 
+  if (fs.existsSync(MCP_LOG)) {
+    const initialMcp = fs.readFileSync(MCP_LOG, "utf-8");
+    lastMcpSize = Buffer.byteLength(initialMcp);
+    initialMcp
+      .split("\n")
+      .filter(Boolean)
+      .slice(-10)
+      .forEach((line) => sendLine(`mcp ${line}`));
+  }
+
   const interval = setInterval(() => {
     if (!fs.existsSync(EVENTS_FILE)) return;
     const stat = fs.statSync(EVENTS_FILE);
@@ -147,7 +159,21 @@ agentRouter.get("/events", (req, res) => {
     lastSize = stat.size;
   }, 1500);
 
+  const mcpInterval = setInterval(() => {
+    if (!fs.existsSync(MCP_LOG)) return;
+    const stat = fs.statSync(MCP_LOG);
+    if (stat.size <= lastMcpSize) return;
+    const fd = fs.openSync(MCP_LOG, "r");
+    const buf = Buffer.alloc(stat.size - lastMcpSize);
+    fs.readSync(fd, buf, 0, buf.length, lastMcpSize);
+    fs.closeSync(fd);
+    const chunk = buf.toString("utf-8");
+    chunk.split("\n").filter(Boolean).forEach((line) => sendLine(`mcp ${line}`));
+    lastMcpSize = stat.size;
+  }, 2000);
+
   req.on("close", () => {
     clearInterval(interval);
+    clearInterval(mcpInterval);
   });
 });

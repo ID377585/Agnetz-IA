@@ -411,6 +411,25 @@ input[type="range"] {
   display: flex;
 }
 
+.floating-cube {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.floating-cube .cube {
+  position: absolute;
+  top: 12%;
+  left: 12%;
+  width: 90px;
+  height: 90px;
+  border-radius: 18px;
+}
+
+.floating-cube.roam .cube {
+  animation: roam 6s ease-in-out infinite;
+}
+
 .overlay-card {
   background: var(--panel);
   border-radius: 20px;
@@ -508,6 +527,15 @@ input[type="range"] {
   25% { transform: translate(120px, -40px); }
   50% { transform: translate(0, -80px); }
   75% { transform: translate(-120px, -40px); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes roam {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(220px, -60px); }
+  40% { transform: translate(480px, 40px); }
+  60% { transform: translate(320px, 180px); }
+  80% { transform: translate(80px, 120px); }
   100% { transform: translate(0, 0); }
 }
 

@@ -23,6 +23,8 @@ const overlayTerminal = document.getElementById("overlay-terminal");
 const overlayTitle = document.getElementById("overlay-title");
 const overlaySub = document.getElementById("overlay-sub");
 const overlayFace = document.getElementById("overlay-face");
+const floatingCube = document.getElementById("floating-cube");
+const floatingFace = document.getElementById("floating-face");
 
 let audioCtx;
 let lastTaskPoll = 0;
@@ -79,16 +81,35 @@ function speak(text) {
   utter.lang = "pt-BR";
   const persona = state.config.voicePersona || "calma";
   const baseRate = Number(state.config.voiceRate || 1);
+  let rate = baseRate;
+  let pitch = 1.0;
+
   if (persona === "rapida") {
-    utter.rate = Math.min(1.3, baseRate + 0.2);
-    utter.pitch = 1.1;
+    rate = Math.min(1.3, baseRate + 0.2);
+    pitch = 1.1;
   } else if (persona === "brava") {
-    utter.rate = Math.max(0.9, baseRate);
-    utter.pitch = 0.8;
+    rate = Math.max(0.9, baseRate);
+    pitch = 0.8;
   } else {
-    utter.rate = baseRate;
-    utter.pitch = 1.0;
+    rate = baseRate;
+    pitch = 1.0;
   }
+
+  // voz dinâmica por estado
+  if (state.face === "happy") {
+    rate = Math.min(1.35, rate + 0.1);
+    pitch = Math.min(1.3, pitch + 0.2);
+  }
+  if (state.face === "sleep") {
+    rate = Math.max(0.75, rate - 0.15);
+    pitch = Math.max(0.7, pitch - 0.2);
+  }
+  if (state.face === "thinking" || state.face === "working") {
+    rate = Math.min(1.25, rate + 0.05);
+  }
+
+  utter.rate = rate;
+  utter.pitch = pitch;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utter);
 }
@@ -118,10 +139,12 @@ function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
     overlayTerminal.innerHTML = "";
     overlayFace.classList.add("working");
     overlayFace.classList.add("fly");
+    floatingCube.classList.add("roam");
   } else {
     overlay.classList.remove("show");
     overlayFace.classList.remove("working");
     overlayFace.classList.remove("fly");
+    floatingCube.classList.remove("roam");
   }
 }
 
@@ -168,6 +191,8 @@ function saveStore(key, value) {
 
 function setFace(mode) {
   agentFace.className = `cube ${mode}`.trim();
+  overlayFace.className = `cube ${mode}`.trim();
+  floatingFace.className = `cube ${mode}`.trim();
   state.face = mode;
 }
 
