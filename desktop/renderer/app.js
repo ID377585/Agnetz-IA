@@ -13,13 +13,22 @@ const attachList = document.getElementById("attach-list");
 const backendUrlEl = document.getElementById("backend-url");
 const mcpUrlEl = document.getElementById("mcp-url");
 const mcpTokenEl = document.getElementById("mcp-token");
+const voiceEnabledEl = document.getElementById("voice-enabled");
+const voiceRateEl = document.getElementById("voice-rate");
 const saveConfigBtn = document.getElementById("save-config");
 const clearQueueBtn = document.getElementById("clear-queue");
+const overlay = document.getElementById("working-overlay");
+const overlayTerminal = document.getElementById("overlay-terminal");
+const overlayTitle = document.getElementById("overlay-title");
+const overlaySub = document.getElementById("overlay-sub");
+const overlayFace = document.getElementById("overlay-face");
 
 const defaultConfig = {
   backendUrl: "http://localhost:8787",
   mcpUrl: "http://localhost:8788",
   mcpToken: "",
+  voiceEnabled: true,
+  voiceRate: 1.0,
 };
 
 const state = {
@@ -29,6 +38,63 @@ const state = {
   config: loadStore("agnetz.config", defaultConfig),
   face: "idle",
 };
+
+const personaSnark = [
+  "Cara, você é folgado. Mas vamo lá.",
+  "Ok, ok… vou fazer. Só dessa vez.",
+  "Você pede, eu resolvo. Simples.",
+  "Respira. Eu resolvo isso.",
+];
+
+const personaFinish = [
+  "Pronto. Sem drama.",
+  "Resolvido. Pode agradecer depois.",
+  "Tá feito. Próximo pedido.",
+];
+
+function pick(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function applyPersona(text) {
+  if (!text) return text;
+  const lower = text.toLowerCase();
+  if (lower.includes("erro") || lower.includes("falha")) return text;
+  return `${pick(personaSnark)}\n${text}\n${pick(personaFinish)}`;
+}
+
+function speak(text) {
+  if (!state.config.voiceEnabled) return;
+  if (!("speechSynthesis" in window)) return;
+  const utter = new SpeechSynthesisUtterance(text);
+  const voices = window.speechSynthesis.getVoices();
+  const female = voices.find((v) => /female|brasil|portuguese/i.test(v.name)) || voices[0];
+  if (female) utter.voice = female;
+  utter.lang = "pt-BR";
+  utter.rate = Number(state.config.voiceRate || 1);
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(utter);
+}
+
+function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
+  if (visible) {
+    overlay.classList.add("show");
+    overlayTitle.textContent = title;
+    overlaySub.textContent = detail || "Preparando tudo para você.";
+    overlayTerminal.innerHTML = "";
+    overlayFace.classList.add("working");
+  } else {
+    overlay.classList.remove("show");
+    overlayFace.classList.remove("working");
+  }
+}
+
+function pushOverlayLog(line) {
+  const item = document.createElement("div");
+  item.textContent = `> ${line}`;
+  overlayTerminal.appendChild(item);
+  overlayTerminal.scrollTop = overlayTerminal.scrollHeight;
+}
 
 function loadStore(key, fallback) {
   try {
@@ -88,6 +154,8 @@ function applyConfig() {
   backendUrlEl.value = state.config.backendUrl || "";
   mcpUrlEl.value = state.config.mcpUrl || "";
   mcpTokenEl.value = state.config.mcpToken || "";
+  voiceEnabledEl.checked = state.config.voiceEnabled;
+  voiceRateEl.value = state.config.voiceRate || 1.0;
 }
 
 async function ping(url) {
@@ -120,12 +188,13 @@ async function updateStatus() {
 function addMessage(role, content) {
   const msg = {
     role,
-    content,
+    content: role === "bot" ? applyPersona(content) : content,
     time: new Date().toLocaleTimeString(),
   };
   state.messages.push(msg);
   saveStore("agnetz.chat", state.messages);
   renderChat();
+  if (role === "bot") speak(msg.content);
 }
 
 function enqueueTask(type, status = "pendente") {
@@ -187,9 +256,13 @@ sendBtn.addEventListener("click", async () => {
   addMessage("user", content);
   promptEl.value = "";
   setFace("thinking");
+  setOverlayVisible(true, "Agnetz em ação", "Executando sua solicitação…");
+  pushOverlayLog("Inicializando MCP");
+  pushOverlayLog("Carregando contexto");
 
   if (state.attachments.length) {
     try {
+      pushOverlayLog(`Enviando ${state.attachments.length} anexo(s)`);
       const uploaded = await uploadAttachments();
       addMessage("bot", `Anexos enviados: ${uploaded.length}`);
     } catch (err) {
@@ -200,13 +273,16 @@ sendBtn.addEventListener("click", async () => {
   }
 
   try {
+    pushOverlayLog("Chamando modelo local");
     const reply = await runMcpChat(content);
     addMessage("bot", reply);
     setFace("happy");
+    setOverlayVisible(false);
     setTimeout(() => setFace("idle"), 1200);
   } catch (err) {
     addMessage("bot", `Erro ao chamar MCP: ${err?.message || err}`);
     setFace("sleep");
+    setOverlayVisible(false, "Ops…", "Algo falhou no caminho.");
   }
 });
 
@@ -222,6 +298,8 @@ saveConfigBtn.addEventListener("click", () => {
     backendUrl: backendUrlEl.value.trim() || defaultConfig.backendUrl,
     mcpUrl: mcpUrlEl.value.trim() || defaultConfig.mcpUrl,
     mcpToken: mcpTokenEl.value.trim(),
+    voiceEnabled: voiceEnabledEl.checked,
+    voiceRate: Number(voiceRateEl.value || 1.0),
   };
   saveStore("agnetz.config", state.config);
   updateStatus();

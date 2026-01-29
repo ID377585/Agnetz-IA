@@ -157,6 +157,25 @@ body {
   color: var(--muted);
 }
 
+.voice-settings {
+  display: grid;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.toggle input {
+  width: 14px;
+  height: 14px;
+}
+
 .status-list {
   display: grid;
   gap: 8px;
@@ -364,6 +383,78 @@ input[type="password"] {
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 12px;
+}
+
+input[type="range"] {
+  width: 100%;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.overlay.show {
+  display: flex;
+}
+
+.overlay-card {
+  background: var(--panel);
+  border-radius: 20px;
+  padding: 24px;
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 24px;
+  width: min(880px, 90vw);
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.35);
+}
+
+.overlay-cube {
+  display: grid;
+  gap: 12px;
+  justify-items: center;
+}
+
+.overlay-cube .cube {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
+  animation: float 3s ease-in-out infinite;
+}
+
+.epi {
+  display: flex;
+  gap: 8px;
+  font-size: 20px;
+}
+
+.overlay-info h2 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.overlay-info p {
+  margin: 6px 0 12px;
+  color: var(--muted);
+}
+
+.terminal {
+  background: #0b1120;
+  color: #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  font-family: "Space Grotesk", monospace;
+  font-size: 12px;
+  min-height: 140px;
+  max-height: 200px;
+  overflow: auto;
+  display: grid;
+  gap: 6px;
 }
 
 @keyframes blink {
