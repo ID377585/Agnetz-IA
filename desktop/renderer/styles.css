@@ -15,6 +15,18 @@
   --danger: #ef4444;
 }
 
+body.dark {
+  --bg: #0b1220;
+  --panel: #0f172a;
+  --panel-2: #1e293b;
+  --primary: #38bdf8;
+  --primary-dark: #0ea5e9;
+  --accent: #60a5fa;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+  --border: #1f2937;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -26,6 +38,9 @@ body {
   color: var(--text);
 }
 
+body.dark {
+  background: radial-gradient(circle at top left, #0b1220 0%, #0f172a 45%, #111827 100%);
+}
 .app {
   display: grid;
   grid-template-columns: 340px 1fr;
@@ -303,6 +318,15 @@ button:hover {
 .msg.bot {
   justify-self: start;
   background: #f1f5f9;
+}
+
+body.dark .msg.user {
+  background: #1d4ed8;
+  color: #e2e8f0;
+}
+
+body.dark .msg.bot {
+  background: #1e293b;
 }
 
 .msg .meta {

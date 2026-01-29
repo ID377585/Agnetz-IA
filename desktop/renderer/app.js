@@ -14,6 +14,7 @@ const backendUrlEl = document.getElementById("backend-url");
 const mcpUrlEl = document.getElementById("mcp-url");
 const mcpTokenEl = document.getElementById("mcp-token");
 const voiceEnabledEl = document.getElementById("voice-enabled");
+const themeToggleEl = document.getElementById("theme-toggle");
 const voicePersonaEl = document.getElementById("voice-persona");
 const voiceRateEl = document.getElementById("voice-rate");
 const saveConfigBtn = document.getElementById("save-config");
@@ -37,6 +38,7 @@ const defaultConfig = {
   voiceEnabled: true,
   voicePersona: "calma",
   voiceRate: 1.0,
+  theme: "light",
 };
 
 const state = {
@@ -120,7 +122,10 @@ function beep(type = "work") {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = "sine";
-    osc.frequency.value = type === "done" ? 880 : 520;
+    if (type === "deploy") osc.frequency.value = 740;
+    else if (type === "rollback") osc.frequency.value = 460;
+    else if (type === "mcp") osc.frequency.value = 620;
+    else osc.frequency.value = type === "done" ? 880 : 520;
     gain.gain.value = 0.04;
     osc.connect(gain);
     gain.connect(audioCtx.destination);
@@ -196,6 +201,14 @@ function setFace(mode) {
   state.face = mode;
 }
 
+function pointCubeTo(element) {
+  if (!element) return;
+  const rect = element.getBoundingClientRect();
+  floatingFace.style.transform = `translate(${rect.left}px, ${rect.top}px)`;
+  floatingFace.classList.add("happy");
+  setTimeout(() => floatingFace.classList.remove("happy"), 600);
+}
+
 function renderChat() {
   chatEl.innerHTML = "";
   state.messages.forEach((msg) => {
@@ -238,6 +251,8 @@ function applyConfig() {
   voiceEnabledEl.checked = state.config.voiceEnabled;
   voicePersonaEl.value = state.config.voicePersona || "calma";
   voiceRateEl.value = state.config.voiceRate || 1.0;
+  themeToggleEl.checked = state.config.theme === "dark";
+  document.body.classList.toggle("dark", state.config.theme === "dark");
 }
 
 async function ping(url) {
@@ -422,6 +437,7 @@ saveConfigBtn.addEventListener("click", () => {
     voiceEnabled: voiceEnabledEl.checked,
     voicePersona: voicePersonaEl.value,
     voiceRate: Number(voiceRateEl.value || 1.0),
+    theme: themeToggleEl.checked ? "dark" : "light",
   };
   saveStore("agnetz.config", state.config);
   updateStatus();
@@ -438,6 +454,8 @@ Array.from(document.querySelectorAll("[data-action]")).forEach((btn) => {
   btn.addEventListener("click", async () => {
     const type = btn.dataset.action;
     enqueueTask(type, "pendente");
+    pointCubeTo(btn);
+    beep(type);
 
     if (!state.config.backendUrl) {
       enqueueTask(type, "backend não configurado");
