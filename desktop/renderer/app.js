@@ -23,6 +23,9 @@ const overlayTitle = document.getElementById("overlay-title");
 const overlaySub = document.getElementById("overlay-sub");
 const overlayFace = document.getElementById("overlay-face");
 
+let audioCtx;
+let lastTaskPoll = 0;
+
 const defaultConfig = {
   backendUrl: "http://localhost:8787",
   mcpUrl: "http://localhost:8788",
@@ -76,6 +79,23 @@ function speak(text) {
   window.speechSynthesis.speak(utter);
 }
 
+function beep(type = "work") {
+  try {
+    audioCtx = audioCtx || new AudioContext();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = "sine";
+    osc.frequency.value = type === "done" ? 880 : 520;
+    gain.gain.value = 0.04;
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.12);
+  } catch {
+    // ignore audio errors
+  }
+}
+
 function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
   if (visible) {
     overlay.classList.add("show");
@@ -83,9 +103,11 @@ function setOverlayVisible(visible, title = "Trabalhando…", detail = "") {
     overlaySub.textContent = detail || "Preparando tudo para você.";
     overlayTerminal.innerHTML = "";
     overlayFace.classList.add("working");
+    overlayFace.classList.add("fly");
   } else {
     overlay.classList.remove("show");
     overlayFace.classList.remove("working");
+    overlayFace.classList.remove("fly");
   }
 }
 
@@ -94,6 +116,26 @@ function pushOverlayLog(line) {
   item.textContent = `> ${line}`;
   overlayTerminal.appendChild(item);
   overlayTerminal.scrollTop = overlayTerminal.scrollHeight;
+}
+
+function launchConfetti() {
+  for (let i = 0; i < 18; i += 1) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = `${20 + Math.random() * 60}%`;
+    c.style.background = ["#38bdf8", "#60a5fa", "#f59e0b", "#22c55e"][i % 4];
+    c.style.animationDelay = `${Math.random() * 0.2}s`;
+    overlay.appendChild(c);
+    setTimeout(() => c.remove(), 2400);
+  }
+  for (let i = 0; i < 4; i += 1) {
+    const b = document.createElement("div");
+    b.className = "balloon";
+    b.style.left = `${30 + Math.random() * 40}%`;
+    b.style.background = ["#93c5fd", "#a7f3d0", "#fda4af", "#fde68a"][i % 4];
+    overlay.appendChild(b);
+    setTimeout(() => b.remove(), 3000);
+  }
 }
 
 function loadStore(key, fallback) {
@@ -207,6 +249,25 @@ function enqueueTask(type, status = "pendente") {
   renderTasks();
 }
 
+async function fetchTasks() {
+  if (!state.config.backendUrl) return;
+  const now = Date.now();
+  if (now - lastTaskPoll < 5000) return;
+  lastTaskPoll = now;
+  try {
+    const res = await fetch(`${state.config.backendUrl}/api/tasks`);
+    if (!res.ok) return;
+    const json = await res.json();
+    if (Array.isArray(json.tasks)) {
+      state.tasks = json.tasks;
+      saveStore("agnetz.tasks", state.tasks);
+      renderTasks();
+    }
+  } catch {
+    // ignore
+  }
+}
+
 async function runMcpChat(message) {
   const headers = { "Content-Type": "application/json" };
   if (state.config.mcpToken) {
@@ -259,6 +320,7 @@ sendBtn.addEventListener("click", async () => {
   setOverlayVisible(true, "Agnetz em ação", "Executando sua solicitação…");
   pushOverlayLog("Inicializando MCP");
   pushOverlayLog("Carregando contexto");
+  beep("work");
 
   if (state.attachments.length) {
     try {
@@ -278,6 +340,8 @@ sendBtn.addEventListener("click", async () => {
     addMessage("bot", reply);
     setFace("happy");
     setOverlayVisible(false);
+    launchConfetti();
+    beep("done");
     setTimeout(() => setFace("idle"), 1200);
   } catch (err) {
     addMessage("bot", `Erro ao chamar MCP: ${err?.message || err}`);
@@ -330,6 +394,7 @@ Array.from(document.querySelectorAll("[data-action]")).forEach((btn) => {
       if (!res.ok) throw new Error(await res.text());
       const json = await res.json();
       enqueueTask(type, json?.task?.status || "executado");
+      await fetchTasks();
     } catch (err) {
       enqueueTask(type, `erro: ${err?.message || err}`);
     }
@@ -341,4 +406,6 @@ renderChat();
 renderTasks();
 renderAttachments();
 updateStatus();
+fetchTasks();
 setInterval(updateStatus, 15000);
+setInterval(fetchTasks, 8000);
