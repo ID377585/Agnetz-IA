@@ -28,24 +28,39 @@ jobs:
             const since = new Date(Date.now() - windowHours * 3600 * 1000);
 
             const workflows = [
-              { name: "Build, Scan, Push & Update GitOps", category: "deploy", threshold: deployFailThreshold },
-              { name: "Promote (staging → prod)", category: "deploy", threshold: deployFailThreshold },
-              { name: "Rollback (GitOps)", category: "rollback", threshold: rollbackThreshold },
+              {
+                id: "build-and-push.yml",
+                name: "Build, Scan, Push & Update GitOps",
+                category: "deploy",
+                threshold: deployFailThreshold
+              },
+              {
+                id: "promote.yml",
+                name: "Promote (staging → prod)",
+                category: "deploy",
+                threshold: deployFailThreshold
+              },
+              {
+                id: "rollback.yml",
+                name: "Rollback (GitOps)",
+                category: "rollback",
+                threshold: rollbackThreshold
+              },
             ];
 
-            async function listRuns(workflowName) {
+            async function listRuns(workflowId) {
               const { data } = await github.rest.actions.listWorkflowRuns({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 per_page: 50,
-                workflow_id: workflowName,
+                workflow_id: workflowId,
                 status: "completed",
               });
               return data.workflow_runs || [];
             }
 
             for (const wf of workflows) {
-              const runs = await listRuns(wf.name);
+              const runs = await listRuns(wf.id);
               const recent = runs.filter(r => new Date(r.created_at) >= since);
               const failures = recent.filter(r => r.conclusion === "failure").length;
               if (failures >= wf.threshold) {
