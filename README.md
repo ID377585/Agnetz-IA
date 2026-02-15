@@ -1,4 +1,4 @@
-**Agnetz.IA**
+# Agnetz.IA
 
 Assistente local com Ollama + CLI Node.js + orquestrador Python para criar apps completos e operar ferramentas via MCP.
 
@@ -9,7 +9,7 @@ Assistente local com Ollama + CLI Node.js + orquestrador Python para criar apps 
 - Desktop (Electron) para chat, acoes rapidas e geracao visual.
 - Backend/Frontend de referencia e templates auxiliares.
 
-**Como Rodar (CLI)**
+**Inicio Rapido (CLI)**
 ```bash
 npm install
 node ./agnetz.js "criar um app de notas web"
@@ -35,13 +35,13 @@ node ./agnetz.js "criar um app de notas web"
 
 **Funcoes do CLI**
 - Chat local com Ollama.
-- `--plan`, `--plan-show`, `--execute` para planejamento e execucao segura.
-- `--read`, `--write`, `--validate-json` para utilidades de arquivos.
-- `--summarize`, `--extract-facts` para resumo e fatos de arquivos.
-- `--csv-read`, `--csv-summary`, `--csv-analyze` para analise de CSV.
-- `--mcp-tools`, `--mcp-run`, `--mcp-navigate`, `--mcp-screenshot`, `--mcp-eval`, `--mcp-content`.
-- `--serve` para endpoints de observabilidade e metricas.
-- `--reset`, `--summary` para memoria/resumo local.
+- Planejamento e execucao segura: `--plan`, `--plan-show`, `--execute`.
+- Utilitarios de arquivos: `--read`, `--write`, `--validate-json`.
+- Resumo e fatos: `--summarize`, `--extract-facts`.
+- CSV: `--csv-read`, `--csv-summary`, `--csv-analyze`.
+- MCP: `--mcp-tools`, `--mcp-run`, `--mcp-navigate`, `--mcp-screenshot`, `--mcp-eval`, `--mcp-content`.
+- Observabilidade: `--serve` (metrics, health, ready).
+- Memoria local: `--reset`, `--summary`.
 
 **Orquestrador Python**
 ```bash
@@ -52,6 +52,33 @@ pip install -r requirements.txt
 python main.py --request "Crie um app full-stack com autenticacao simples"
 ```
 - `--run-tests` e `--autofix` existem, mas ainda sao placeholders.
+- RAG: `--rag-index`, `--rag-query`, `--rag-use`, `--rag-topk`.
+- Templates: `--no-templates`, `--overwrite`.
+
+**Secrets (env / dotenv / AWS / Vault / GitHub)**
+```bash
+# 1) Dotenv -> k8s secret + sops
+python main.py --secrets-provider dotenv \
+  --secrets-dotenv .env \
+  --secrets-keys DATABASE_URL,API_KEY \
+  --secrets-k8s-out k8s/overlays/prod/secret-prod.enc.yaml \
+  --secrets-k8s-namespace agnetz-prod \
+  --secrets-sops
+
+# 2) AWS Secrets Manager -> .env
+python main.py --secrets-provider aws \
+  --secrets-path agnetz/prod \
+  --secrets-region us-east-1 \
+  --secrets-env-out backend/.env
+
+# 3) Vault (KV v2) -> GitHub Secrets (requer gh CLI)
+export VAULT_ADDR="http://127.0.0.1:8200"
+export VAULT_TOKEN="s.xxxxx"
+python main.py --secrets-provider vault \
+  --secrets-path secret/data/agnetz/prod \
+  --secrets-gh-repo ID377585/Agnetz-IA \
+  --secrets-gh-env production
+```
 
 **MCP Gateway**
 - Detalhes em `src/mcp/README.md`.
