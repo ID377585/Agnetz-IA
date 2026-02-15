@@ -2,27 +2,27 @@
 
 Assistente local com Ollama + CLI Node.js + orquestrador Python para criar apps completos e operar ferramentas via MCP.
 
-## Components
+## Componentes
 - CLI `agnetz` (Node.js) para chat, geracao de apps, utilitarios e execucao segura.
 - Orquestrador Python para gerar apps completos (web, API, CLI, GUI), incluindo Django quando solicitado.
 - MCP Gateway para conectar ferramentas (Ollama, Notion, Telegram, Chrome, WhatsApp).
 - Desktop (Electron) para chat, acoes rapidas e geracao visual.
 - Backend/Frontend de referencia e templates auxiliares.
 
-## Quick Start (CLI)
+## Inicio Rapido (CLI)
 ```bash
 npm install
 node ./agnetz.js "criar um app de notas web"
 ```
 
-## App Generation (automatic in CLI)
+## Geracao de Apps (automatica no CLI)
 - Quando o pedido indica criacao de app, o CLI chama o orquestrador automaticamente.
 - Saida padrao em `generated-apps/<slug>` ou no caminho definido por `AGNETZ_GENERATED_DIR`.
 - Tipos suportados: web, API, CLI, GUI e calculadora.
 - Stack padrao quando nao especificado: web.
 - Geracao por LLM ativada por padrao (desative com `AGNETZ_LLM_GENERATION=0`).
 
-## Django (CLI)
+## Django (via CLI)
 ```bash
 ./agnetz "criar um app de notas feito com o framework Django"
 ```
@@ -33,7 +33,7 @@ node ./agnetz.js "criar um app de notas web"
 - `DJANGO_SUPERUSER_PASSWORD`
 - `DJANGO_SUPERUSER_EMAIL` (opcional)
 
-## CLI Capabilities
+## Funcoes do CLI
 - Chat local com Ollama.
 - Planejamento e execucao segura: `--plan`, `--plan-show`, `--execute`.
 - Utilitarios de arquivos: `--read`, `--write`, `--validate-json`.
@@ -80,7 +80,7 @@ python main.py --secrets-provider vault \
   --secrets-gh-env production
 ```
 
-## See Also
+## Referencias
 - MCP Gateway: `src/mcp/README.md`
 - Desktop: `desktop/README.md`
 - Observabilidade: `ops/observability/README.md`
