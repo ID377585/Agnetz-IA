@@ -1,7 +1,5 @@
 package k8s.deny
 
-default deny := []
-
 is_workload {
   input.kind == "Deployment"
 } else {
