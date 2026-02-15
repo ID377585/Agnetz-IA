@@ -36,13 +36,15 @@ kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/st
 
 ```
 # Exemplo: build local
-docker build -t generated-app-backend:latest ./python/generated-app/backend
-docker build -t generated-app-frontend:latest ./python/generated-app/frontend
+docker build -t generated-app-backend:latest ./generated-apps/<slug>/backend
+docker build -t generated-app-frontend:latest ./generated-apps/<slug>/frontend
 
 # Importar no k3d
 k3d image import -c agnetz generated-app-backend:latest
 k3d image import -c agnetz generated-app-frontend:latest
 ```
+
+Substitua `<slug>` pelo nome da pasta gerada pelo orquestrador.
 
 4) Ajustar `repoURL` do ArgoCD:
 

@@ -18,6 +18,7 @@ If `MCP_GATEWAY_TOKEN` is set, every request to `/tools` and `/run` must include
 ```
 Authorization: Bearer <token>
 ```
+If `MCP_GATEWAY_TOKEN` is not set, the endpoints are open. Set a token for safety.
 
 ## Connectors
 Environment variables:
@@ -28,12 +29,18 @@ Environment variables:
 - `MCP_NOTION_VERSION` (default `2022-06-28`)
 - `MCP_TELEGRAM_TOKEN`
 - `MCP_CHROME_WS` (Chrome DevTools WS URL)
+- `MCP_WHATSAPP_TOKEN`
+- `MCP_WHATSAPP_PHONE_ID`
+- `MCP_WHATSAPP_API_VERSION` (default `v22.0`)
+- `MCP_CHROME_DEBUG_PORT` (used by `scripts/start-mcp-chrome.sh`)
+- `MCP_CHROME_USER_DIR` (used by `scripts/start-mcp-chrome.sh`)
 
 Actions:
 - `ollama`: `chat`
 - `notion`: `search`, `createPage`, `updatePage`, `appendBlocks`
 - `telegram`: `sendMessage`, `getUpdates`
-- `chrome`: `status`, `navigate`, `screenshot`, `evaluate`, `content`
+- `chrome`: `status`, `navigate`, `screenshot`, `evaluate`, `content`, `exploreCatalog`
+- `whatsapp`: `sendText`
 
 ## Logs
 JSONL logs at `data/mcp.log`:
@@ -130,5 +137,28 @@ curl -s -X POST http://localhost:8788/run \
   "connector": "chrome",
   "action": "evaluate",
   "input": { "expression": "document.title" }
+}
+```
+
+### Chrome: exploreCatalog
+```json
+{
+  "connector": "chrome",
+  "action": "exploreCatalog",
+  "input": {
+    "url": "https://webflow.com/templates",
+    "limit": 10,
+    "pages": 2,
+    "keywords": ["restaurant", "pizza"]
+  }
+}
+```
+
+### WhatsApp: sendText
+```json
+{
+  "connector": "whatsapp",
+  "action": "sendText",
+  "input": { "to": "5511999999999", "text": "Ola via MCP" }
 }
 ```
