@@ -21,8 +21,26 @@ TARGETS=(
   "$ROOT_DIR/k8s/overlays/prod"
 )
 
+TARGET_FILES=()
+for target in "${TARGETS[@]}"; do
+  if [ -d "$target" ]; then
+    while IFS= read -r -d '' file; do
+      TARGET_FILES+=("$file")
+    done < <(
+      find "$target" -type f \( -name '*.yaml' -o -name '*.yml' \) \
+        ! -path '*/flux-system/*' -print0
+    )
+  elif [ -f "$target" ]; then
+    TARGET_FILES+=("$target")
+  fi
+done
+
+if [ "${#TARGET_FILES[@]}" -eq 0 ]; then
+  echo "No manifest files found for policy check."
+  exit 0
+fi
+
 conftest test \
   --policy "$ROOT_DIR/policy/k8s" \
   --all-namespaces \
-  --exclude 'k8s/overlays/prod/flux-system/*' \
-  "${TARGETS[@]}"
+  "${TARGET_FILES[@]}"
